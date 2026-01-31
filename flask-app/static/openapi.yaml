@@ -1,0 +1,69 @@
+openapi: 3.0.0
+info:
+  title: WhatsApp Multi-Tenant Platform API
+  description: Send WhatsApp messages programmatically using your connected accounts.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /send:
+    post:
+      summary: Send a Message
+      description: Sends a text message from a connected WhatsApp account to a destination number.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - message
+              properties:
+                account_id:
+                  type: string
+                  description: The unique alias of the WhatsApp account you created in the dashboard.
+                  example: "marketing-1"
+                to:
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                  description: Destination phone number(s). Can be a single number, a comma-separated string, or an array of numbers.
+                  example: ["923123456789", "923987654321"]
+                message:
+                  type: string
+                  description: The text message content.
+                  example: "Hello from the API!"
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  jid:
+                    type: string
+                    example: "923123456789@s.whatsapp.net"
+        '401':
+          description: Unauthorized (Invalid API Key)
+        '404':
+          description: Account ID not found

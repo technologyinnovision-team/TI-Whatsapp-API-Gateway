@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- Header Stats -->
+<div class="mb-10">
+    <h1 class="text-3xl font-bold mb-2">Dashboard</h1>
+    <p class="text-slate-400">Manage your WhatsApp accounts and API keys.</p>
+</div>
+
+<!-- API Key Section -->
+<div class="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-8 relative group overflow-hidden">
+    <div class="absolute top-0 right-0 p-4 opacity-10">
+        <i class="fas fa-key text-8xl text-white"></i>
+    </div>
+    <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-2">Your API Key</h3>
+    <div class="flex items-center space-x-4">
+        <code
+            class="bg-slate-900 px-4 py-2 rounded-lg font-mono text-emerald-400 text-lg border border-slate-700 select-all">{{ user.api_key }}</code>
+        <button onclick="navigator.clipboard.writeText('{{ user.api_key }}')"
+            class="p-2 text-slate-400 hover:text-white transition-colors" title="Copy">
+            <i class="fas fa-copy"></i>
+        </button>
+    </div>
+</div>
+
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-xl font-semibold">Active Accounts</h2>
+    <!-- Add Button Trigger -->
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <!-- Add Account Card -->
+    <div
+        class="bg-slate-800/50 border border-slate-700 border-dashed rounded-xl p-6 flex flex-col justify-center items-center hover:bg-slate-800 transition-all group">
+        <form action="{{ url_for('add_account') }}" method="POST" class="w-full text-center">
+            <div
+                class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center mb-4 mx-auto group-hover:bg-emerald-500/20 text-emerald-500 transition-colors">
+                <i class="fas fa-plus text-xl"></i>
+            </div>
+            <h3 class="font-medium text-lg mb-2">Link New Number</h3>
+            <input type="text" name="alias" placeholder="e.g. Support Line"
+                class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm w-full mb-3 focus:outline-none focus:border-emerald-500 text-center"
+                required>
+            <button type="submit"
+                class="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg w-full transition-colors">Create
+                & Link</button>
+        </form>
+    </div>
+
+    <!-- Existing Accounts -->
+    {% for account in user.accounts %}
+    <a href="{{ url_for('view_account', id=account.id) }}" class="block">
+        <div
+            class="bg-slate-800 rounded-xl border border-slate-700 p-6 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 transition-all h-full flex flex-col justify-between">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
+                    <i class="fab fa-whatsapp text-xl"></i>
+                </div>
+                <!-- Status Dot Placeholder (JS will update real status in detailed view, but we defaults to green for UI feel) -->
+                <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+            </div>
+
+            <div>
+                <h3 class="font-bold text-lg text-white mb-1">{{ account.alias }}</h3>
+                <p class="text-xs text-slate-500 font-mono">ID: {{ account.session_id[:8] }}...</p>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-slate-700 flex justify-between items-center">
+                <span class="text-xs text-slate-400">View Details</span>
+                <i class="fas fa-arrow-right text-xs text-emerald-500"></i>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+
+</div>
+{% endblock %}

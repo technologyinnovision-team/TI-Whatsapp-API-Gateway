@@ -1,0 +1,141 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center">
+        <a href="{{ url_for('dashboard') }}" class="text-slate-400 hover:text-white mr-4"><i
+                class="fas fa-arrow-left"></i></a>
+        <h1 class="text-2xl font-bold">Manage Account: <span class="text-emerald-500">{{ account.alias }}</span></h1>
+    </div>
+    <div class="flex space-x-2">
+        <form action="{{ url_for('reconnect_account', id=account.id) }}" method="POST">
+            <button type="submit"
+                class="text-blue-400 hover:text-blue-300 text-sm font-medium border border-blue-500/30 px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i> Reconnect
+            </button>
+        </form>
+        <form action="{{ url_for('delete_account', id=account.id) }}" method="POST"
+            onsubmit="return confirm('Are you sure? This will disconnect the session.');">
+            <button type="submit"
+                class="text-red-400 hover:text-red-300 text-sm font-medium border border-red-500/30 px-3 py-2 rounded-lg hover:bg-red-500/10 transition-colors">
+                <i class="fas fa-trash-alt mr-2"></i> Delete Account
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- Left Col: Status & QR -->
+    <div
+        class="bg-slate-800 rounded-xl border border-slate-700 p-8 flex flex-col items-center justify-center min-h-[400px]">
+        <div id="status-badge"
+            class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-6 bg-slate-700 text-slate-400">
+            Checking Status...
+        </div>
+
+        <div class="qr-section bg-white p-4 rounded-xl shadow-2xl relative w-64 h-64 flex items-center justify-center">
+            <!-- Loader -->
+            <div id="qr-loader" class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+            <!-- QR Image -->
+            <img id="qr-image" class="w-full h-full object-contain hidden" alt="Scan QR" />
+            <!-- Connected State -->
+            <div id="connected-state"
+                class="absolute inset-0 bg-white/95 flex-col items-center justify-center hidden rounded-xl">
+                <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-2">
+                    <i class="fas fa-check text-2xl text-emerald-600"></i>
+                </div>
+                <h3 class="text-emerald-900 font-bold">Connected</h3>
+                <p class="text-emerald-600 text-xs">Ready to send messages</p>
+            </div>
+        </div>
+
+        <p class="mt-6 text-slate-400 text-sm text-center max-w-xs">
+            Scan this code with your WhatsApp app (Linked Devices) to connect.
+        </p>
+    </div>
+
+    <!-- Right Col: Info -->
+    <div class="space-y-6">
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
+            <h3 class="font-bold mb-4 flex items-center">
+                <i class="fas fa-info-circle mr-2 text-blue-400"></i> Connection Details
+            </h3>
+            <div class="space-y-3">
+                <div class="flex justify-between border-b border-slate-700 pb-2">
+                    <span class="text-slate-400 text-sm">Session ID</span>
+                    <code class="text-xs font-mono bg-slate-900 px-2 py-1 rounded">{{ account.session_id }}</code>
+                </div>
+                <div class="flex justify-between border-b border-slate-700 pb-2">
+                    <span class="text-slate-400 text-sm">Alias (API ID)</span>
+                    <span class="text-sm font-medium">{{ account.alias }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400 text-sm">Platform</span>
+                    <span class="text-sm font-medium">WhatsApp Web (Multi-Device)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
+            <h3 class="font-bold mb-4 flex items-center">
+                <i class="fas fa-code mr-2 text-purple-400"></i> Quick Test (API)
+            </h3>
+            <div class="bg-slate-900 rounded p-4 text-xs font-mono text-slate-300 overflow-x-auto">
+                <span class="text-purple-400">curl</span> -X POST http://localhost:5000/api/v1/send \<br>
+                -H <span class="text-green-400">"X-API-Key: {{ current_user.api_key }}"</span> \<br>
+                -H <span class="text-green-400">"Content-Type: application/json"</span> \<br>
+                -d <span class="text-yellow-300">'{
+                    "account_id": "{{ account.alias }}",
+                    "to": "923001234567",
+                    "message": "Hello World"
+                    }'</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const statusBadge = document.getElementById('status-badge');
+    const qrImage = document.getElementById('qr-image');
+    const qrLoader = document.getElementById('qr-loader');
+    const connectedState = document.getElementById('connected-state');
+
+    const ACCOUNT_ID = {{ account.id }};
+
+    async function poll() {
+        try {
+            const res = await fetch(`/account/${ACCOUNT_ID}/status_json`);
+            const data = await res.json();
+
+            const isConnected = data.status === 'connected';
+
+            // Badge Styling
+            statusBadge.textContent = data.status.toUpperCase();
+            statusBadge.className = `px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-6 ${isConnected ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' : 'bg-yellow-500/20 text-yellow-500'}`;
+
+            if (isConnected) {
+                qrImage.classList.add('hidden');
+                qrLoader.classList.add('hidden');
+                connectedState.classList.remove('hidden');
+                connectedState.classList.add('flex');
+            } else if (data.qrImage) {
+                qrImage.src = data.qrImage;
+                qrImage.classList.remove('hidden');
+                qrLoader.classList.add('hidden');
+                connectedState.classList.add('hidden');
+                connectedState.classList.remove('flex');
+            } else {
+                // Connecting/Initializing without QR yet
+                qrLoader.classList.remove('hidden');
+                qrImage.classList.add('hidden');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setTimeout(poll, 2000);
+    }
+
+    poll();
+</script>
+{% endblock %}

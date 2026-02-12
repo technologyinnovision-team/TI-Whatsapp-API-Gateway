@@ -38,8 +38,8 @@ Before you begin, ensure you have the following installed:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/whatsapp-api-gateway.git
-cd whatsapp-api-gateway
+git clone https://github.com/technologyinnovision-team/TI-Whatsapp-API-Gateway.git
+cd TI-Whatsapp-API-Gateway
 ```
 
 ### 2. Database Setup

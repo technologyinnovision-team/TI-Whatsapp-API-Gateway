@@ -40,6 +40,61 @@ curl -sSL https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsap
 
 ---
 
+## 🛍️ 100% Backward Compatible (Fahad Styles & E-Commerce Ready)
+
+### Will you have to change any code in Fahad Styles or existing clients?
+> [!IMPORTANT]
+> **NO! Absolutely ZERO code changes are needed in Fahad Styles, WooCommerce, WordPress, Shopify, or your custom plugins.**
+
+The universal endpoint `POST /api/v1/send` accepts the exact same payload and returns the exact same response schema:
+
+| Setting Field in Plugin / Client | Value | Explanation |
+| :--- | :--- | :--- |
+| **Account ID** | `fahadstyles` | Your WhatsApp account alias created in the dashboard |
+| **API Key** | `42f1f0d888161...` | Secret API key passed in `X-API-Key` header |
+| **API URL** | `https://wpapp.tistack.online/api/v1/send` | Standard legacy endpoint with auto anti-ban |
+
+#### Exact Request Sent by Fahad Styles & Existing Clients:
+```json
+POST https://wpapp.tistack.online/api/v1/send
+Headers:
+  Content-Type: application/json
+  X-API-Key: YOUR_API_KEY
+
+Body:
+{
+  "account_id": "fahadstyles",
+  "to": "923001234567",
+  "message": "Dear Customer, your order #4821 has been confirmed!"
+}
+```
+
+#### Exact Response Returned to Fahad Styles:
+```json
+{
+  "status": "success",
+  "total": 1,
+  "successful": 1,
+  "failed": 0,
+  "details": [
+    {
+      "to": "923001234567",
+      "status": "sent",
+      "response": {
+        "success": true,
+        "messageId": "3EB048194...",
+        "jid": "923001234567@s.whatsapp.net"
+      }
+    }
+  ],
+  "success": true
+}
+```
+
+Behind the scenes, your messages now automatically benefit from our **Anti-Ban Protection Engine** (human typing simulation, Spintax randomization, and queue jitter) without requiring you to touch a single line of code in Fahad Styles!
+
+---
+
 ## 🐳 Docker Deployment
 
 Run the complete gateway using Docker & Docker Compose:

@@ -29,6 +29,95 @@ security:
   - BearerAuth: []
 
 paths:
+  /send:
+    post:
+      summary: Universal Send Message (Fahad Styles & E-Commerce Compatible)
+      description: |
+        Primary universal endpoint for all external client applications (WooCommerce, Shopify, Fahad Styles, ERPs).
+        Accepts single phone numbers, comma-separated lists, or arrays of recipients.
+        Automatically applies Anti-Ban human typing simulation, jitter queuing, and Spintax variation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - message
+              properties:
+                account_id:
+                  type: string
+                  description: The unique alias of your WhatsApp account (e.g. "fahadstyles")
+                  example: "fahadstyles"
+                to:
+                  oneOf:
+                    - type: string
+                      description: Single phone number or comma-separated numbers (e.g. "923001234567" or "923001234567, 923119876543")
+                      example: "923001234567"
+                    - type: array
+                      items:
+                        type: string
+                      description: Array of phone numbers
+                      example: ["923001234567", "923119876543"]
+                message:
+                  type: string
+                  description: Text message content (supports Spintax {Hello|Hi})
+                  example: "{Hello|Hi} customer! Your order #4821 has been confirmed."
+      responses:
+        '200':
+          description: Message dispatched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  success:
+                    type: boolean
+                    example: true
+                  total:
+                    type: integer
+                    example: 1
+                  successful:
+                    type: integer
+                    example: 1
+                  failed:
+                    type: integer
+                    example: 0
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        to:
+                          type: string
+                          example: "923001234567"
+                        status:
+                          type: string
+                          example: "sent"
+                        response:
+                          type: object
+                          properties:
+                            success:
+                              type: boolean
+                              example: true
+                            messageId:
+                              type: string
+                              example: "3EB04819..."
+                            jid:
+                              type: string
+                              example: "923001234567@s.whatsapp.net"
+        '400':
+          description: Missing required fields
+        '401':
+          description: Unauthorized (Invalid or missing X-API-Key)
+        '404':
+          description: Account alias not found
+
   /send/text:
     post:
       summary: Send Text Message (Anti-Ban & Spintax)

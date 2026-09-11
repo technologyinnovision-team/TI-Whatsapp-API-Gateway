@@ -77,6 +77,54 @@ class WhatsAppPlatformTestCase(unittest.TestCase):
         self.assertEqual(len(data.get('sessions', [])), 1)
         self.assertEqual(data['sessions'][0]['alias'], 'support_desk')
 
+    def test_legacy_send_compatibility_validation(self):
+        # 1. Test missing params
+        resp = self.app.post('/api/v1/send',
+            headers={'X-API-Key': self.test_api_key},
+            json={'account_id': 'fahadstyles'}
+        )
+        self.assertEqual(resp.status_code, 400)
+        data = json.loads(resp.data)
+        self.assertIn('Missing params', data.get('error', ''))
+
+        # 2. Test account not found
+        resp = self.app.post('/api/v1/send',
+            headers={'X-API-Key': self.test_api_key},
+            json={'account_id': 'nonexistent', 'to': '12345678', 'message': 'Hello'}
+        )
+        self.assertEqual(resp.status_code, 404)
+
+        # 3. Create 'fahadstyles' account and test legacy dispatch schema
+        with app.app_context():
+            acc = WhatsappAccount(
+                user_id=self.test_user_id,
+                alias='fahadstyles',
+                session_id='fahadstyles-session-uuid',
+                mode='standard'
+            )
+            db.session.add(acc)
+            db.session.commit()
+
+        resp = self.app.post('/api/v1/send',
+            headers={'X-API-Key': self.test_api_key},
+            json={
+                'account_id': 'fahadstyles',
+                'to': '923001234567',
+                'message': 'Order #4821 confirmation'
+            }
+        )
+        # Even if bridge offline during test, verify response structure matches legacy format
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertIn('status', data)
+        self.assertIn('total', data)
+        self.assertIn('successful', data)
+        self.assertIn('failed', data)
+        self.assertIn('details', data)
+        self.assertEqual(data['total'], 1)
+        self.assertEqual(len(data['details']), 1)
+        self.assertEqual(data['details'][0]['to'], '923001234567')
+
     def test_swagger_and_openapi_docs(self):
         resp_docs = self.app.get('/docs')
         self.assertEqual(resp_docs.status_code, 200)

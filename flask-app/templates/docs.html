@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp API Documentation | Technology Innovision</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        wa: {
+                            500: '#25D366',
+                            600: '#128C7E',
+                            700: '#075E54'
+                        },
+                        dark: {
+                            950: '#070b10',
+                            900: '#0b1118',
+                            800: '#121a24',
+                            700: '#1a2432',
+                            600: '#253244'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code, pre { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(18, 26, 36, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b1118; }
+        ::-webkit-scrollbar-thumb { background: #253244; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="bg-dark-950 text-slate-100 min-h-screen antialiased selection:bg-wa-500 selection:text-dark-900">
+
+    <!-- Top Header -->
+    <header class="border-b border-slate-800 bg-dark-900/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-wa-500 to-wa-700 flex items-center justify-center shadow-lg shadow-wa-500/20">
+                        <i data-lucide="message-square" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">TI WhatsApp API</span>
+                        <span class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-wa-500/10 text-wa-500 border border-wa-500/20">v2.0 Docs</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="flex items-center space-x-4 text-xs font-medium">
+                <a href="{{ url_for('dashboard') }}" class="hidden sm:inline-flex items-center space-x-1.5 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-dark-800 transition">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-wa-500"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('docs_swagger') }}" class="inline-flex items-center space-x-1.5 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-dark-800 transition">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    <span>Swagger UI</span>
+                </a>
+                <a href="{{ url_for('redoc') }}" class="inline-flex items-center space-x-1.5 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-dark-800 transition">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-purple-400"></i>
+                    <span>ReDoc</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
+
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 flex-shrink-0">
+            <div class="sticky top-24 space-y-6">
+                <div class="glass-panel rounded-2xl p-4 space-y-1">
+                    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">Getting Started</div>
+                    <a href="#overview" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Overview & Base URL</a>
+                    <a href="#authentication" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Authentication (API Key)</a>
+
+                    <div class="pt-3 text-[11px] font-bold text-amber-400 uppercase tracking-wider px-3 py-1 flex items-center space-x-1">
+                        <i data-lucide="zap" class="w-3 h-3 text-amber-400 mr-1"></i>
+                        <span>Client Integrations</span>
+                    </div>
+                    <a href="#fahad-styles-compatibility" class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 transition flex items-center space-x-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span>Fahad Styles & E-Commerce</span>
+                    </a>
+                    <a href="#endpoint-legacy-send" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Universal Send (`/api/v1/send`)</a>
+
+                    <div class="pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">Endpoints</div>
+                    <a href="#endpoint-send-text" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Send Text with Spintax</a>
+                    <a href="#endpoint-send-media" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Send Media (Images/Docs)</a>
+                    <a href="#endpoint-send-voice" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Send Voice Notes (PTT)</a>
+                    <a href="#endpoint-send-poll" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Send WhatsApp Polls</a>
+                    <a href="#endpoint-pairing-code" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">8-Digit Pairing Code</a>
+                    <a href="#endpoint-system-health" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">System Health & Ports</a>
+
+                    <div class="pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">Safety & Webhooks</div>
+                    <a href="#anti-ban-guide" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Anti-Ban Best Practices</a>
+                    <a href="#webhooks" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Incoming Webhooks</a>
+                </div>
+
+                <!-- Live Tester Callout -->
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-wa-700/30 to-dark-800 border border-wa-500/30 text-xs text-slate-300 space-y-2">
+                    <div class="font-bold text-white flex items-center space-x-1.5">
+                        <i data-lucide="code-2" class="w-4 h-4 text-wa-500"></i>
+                        <span>Looking for raw OpenAPI?</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Download the complete OpenAPI 3.0.3 YAML schema or view in Swagger UI.</p>
+                    <a href="/static/openapi.yaml" download class="inline-block text-wa-500 font-semibold hover:underline text-[11px]">Download openapi.yaml &rarr;</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Documentation Content -->
+        <main class="flex-1 min-w-0 space-y-12">
+
+            <!-- 1. Overview Section -->
+            <section id="overview" class="space-y-4">
+                <div class="border-b border-slate-800 pb-4">
+                    <h1 class="text-3xl font-extrabold text-white tracking-tight">API Documentation & Integration Guide</h1>
+                    <p class="text-sm text-slate-400 mt-2">Welcome to the Technology Innovision WhatsApp Enterprise API Gateway. Connect multiple WhatsApp numbers, send high-deliverability messages with Anti-Ban simulation, and receive real-time webhooks.</p>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Base Server URL</h3>
+                    <div class="bg-dark-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between font-mono text-xs text-emerald-400">
+                        <span>https://your-domain.com/api/v1</span>
+                        <span class="text-slate-500 text-[11px]">Production Endpoint</span>
+                    </div>
+                    <p class="text-xs text-slate-400">All API endpoints are relative to <code class="text-white bg-dark-900 px-1 py-0.5 rounded">/api/v1/</code>. For local development, use <code class="text-white bg-dark-900 px-1 py-0.5 rounded">http://localhost:5000/api/v1</code>.</p>
+                </div>
+            </section>
+
+            <!-- 2. Authentication -->
+            <section id="authentication" class="space-y-4">
+                <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i data-lucide="key" class="w-5 h-5 text-wa-500"></i>
+                    <span>Authentication</span>
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-400">Every API request must include your secret API Key. You can find or regenerate your API Key in your <a href="{{ url_for('settings') }}" class="text-wa-500 underline">Dashboard Settings</a>.</p>
+
+                <div class="glass-panel rounded-2xl p-5 space-y-3">
+                    <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Accepted HTTP Headers:</h4>
+                    <div class="space-y-2 font-mono text-xs">
+                        <div class="bg-dark-950 p-3 rounded-xl border border-slate-800 text-slate-300">
+                            <span class="text-cyan-400 font-semibold">X-API-Key:</span> <span class="text-emerald-400">your_secret_api_key_here</span>
+                        </div>
+                        <div class="bg-dark-950 p-3 rounded-xl border border-slate-800 text-slate-300">
+                            <span class="text-cyan-400 font-semibold">Authorization:</span> <span class="text-purple-400">Bearer</span> <span class="text-emerald-400">your_secret_api_key_here</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. FAHAD STYLES & EXISTING CLIENTS SECTION -->
+            <section id="fahad-styles-compatibility" class="space-y-4">
+                <div class="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-dark-800 to-dark-800 border-2 border-emerald-500/40 shadow-xl space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                            <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-extrabold text-white">Fahad Styles & Existing Clients Compatibility</h2>
+                            <p class="text-xs text-emerald-400 font-medium">100% Backward Compatible — Zero Code Changes Required!</p>
+                        </div>
+                    </div>
+
+                    <div class="text-xs sm:text-sm text-slate-300 space-y-2 leading-relaxed">
+                        <p><strong>Do you need to change any code in Fahad Styles, WordPress, WooCommerce, or your client apps?</strong></p>
+                        <p class="text-emerald-300 font-semibold text-base">NO! Absolutely ZERO code changes are needed.</p>
+                        <p>The universal endpoint <code class="bg-dark-950 px-1.5 py-0.5 rounded text-white font-mono">POST /api/v1/send</code> accepts the exact same payload and returns the exact same response schema that your existing applications already use.</p>
+                    </div>
+
+                    <!-- Visual Field Mapping Table -->
+                    <div class="overflow-x-auto mt-4">
+                        <table class="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden">
+                            <thead class="bg-dark-900 text-slate-300 font-semibold">
+                                <tr>
+                                    <th class="p-3">Setting in Client App</th>
+                                    <th class="p-3">Fahad Styles Example</th>
+                                    <th class="p-3">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800 text-slate-300 bg-dark-950/60">
+                                <tr>
+                                    <td class="p-3 font-mono text-cyan-400">Account ID</td>
+                                    <td class="p-3 font-mono text-white font-bold">fahadstyles</td>
+                                    <td class="p-3">The unique alias of the WhatsApp session you created in the Dashboard.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-mono text-cyan-400">API Key</td>
+                                    <td class="p-3 font-mono text-white">42f1f0d888161a6680a...</td>
+                                    <td class="p-3">Your secret API Key passed in the <code class="text-emerald-400">X-API-Key</code> header.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-mono text-cyan-400">API URL</td>
+                                    <td class="p-3 font-mono text-white font-bold">https://wpapp.tistack.online/api/v1/send</td>
+                                    <td class="p-3">The standard legacy endpoint that automatically routes to the Anti-Ban Engine.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Code Examples for Existing Integrations -->
+                    <div class="pt-2">
+                        <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2">How it works behind the scenes for Fahad Styles:</h4>
+                        <div class="bg-dark-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 space-y-2">
+                            <p class="text-slate-400">// Exact request sent by Fahad Styles plugin:</p>
+                            <p class="text-cyan-400">POST https://wpapp.tistack.online/api/v1/send</p>
+                            <p class="text-slate-400">Headers: <span class="text-emerald-400">X-API-Key: 42f1f0d888161...</span></p>
+                            <pre class="text-slate-200">{
+  "account_id": "fahadstyles",
+  "to": "923001234567",
+  "message": "Dear Customer, your Fahad Styles order #4821 has been confirmed!"
+}</pre>
+                            <p class="text-slate-400 pt-2">// Exact response returned to Fahad Styles:</p>
+                            <pre class="text-emerald-400">{
+  "status": "success",
+  "total": 1,
+  "successful": 1,
+  "failed": 0,
+  "details": [
+    {
+      "to": "923001234567",
+      "status": "sent",
+      "response": {
+        "success": true,
+        "messageId": "3EB048194AE...",
+        "jid": "923001234567@s.whatsapp.net"
+      }
+    }
+  ],
+  "success": true
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Universal Send Message Endpoint -->
+            <section id="endpoint-legacy-send" class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">POST</span>
+                        <span>/api/v1/send</span>
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">Universal / Legacy Endpoint</span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-400">Sends a message to a single number, a comma-separated list, or an array of numbers. Features automatic Anti-Ban queuing and Spintax support.</p>
+
+                <!-- Code Tabs Container -->
+                <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+                    <div class="bg-dark-900 border-b border-slate-800 px-4 flex space-x-4 overflow-x-auto text-xs font-semibold">
+                        <button onclick="switchCodeTab('send-php', this)" class="code-tab-btn py-3 border-b-2 border-wa-500 text-wa-500">PHP (cURL)</button>
+                        <button onclick="switchCodeTab('send-wp', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">WordPress / WooCommerce</button>
+                        <button onclick="switchCodeTab('send-py', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">Python</button>
+                        <button onclick="switchCodeTab('send-js', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">Node.js (Axios)</button>
+                        <button onclick="switchCodeTab('send-curl', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">cURL</button>
+                    </div>
+
+                    <!-- Tab: PHP cURL -->
+                    <div id="send-php" class="code-tab-content p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">&lt;?php
+$apiKey = "YOUR_API_KEY";
+$apiUrl = "https://wpapp.tistack.online/api/v1/send";
+
+$payload = [
+    "account_id" => "fahadstyles",
+    "to"         => "923001234567", // single number or "923001234567, 923119876543"
+    "message"    => "{Hello|Hi} customer! Your order is on the way."
+];
+
+$ch = curl_init($apiUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "X-API-Key: " . $apiKey
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+if ($result['status'] === 'success') {
+    echo "Message sent successfully! Total: " . $result['total'];
+}
+?&gt;</pre>
+                    </div>
+
+                    <!-- Tab: WordPress wp_remote_post -->
+                    <div id="send-wp" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">&lt;?php
+// Perfect for WooCommerce functions.php or WordPress plugins
+function send_whatsapp_notification($phoneNumber, $messageText) {
+    $apiKey = "YOUR_API_KEY";
+    $apiUrl = "https://wpapp.tistack.online/api/v1/send";
+
+    $response = wp_remote_post($apiUrl, [
+        'headers' => [
+            'Content-Type' => 'application/json',
+            'X-API-Key'    => $apiKey,
+        ],
+        'body'    => wp_json_encode([
+            'account_id' => 'fahadstyles',
+            'to'         => $phoneNumber,
+            'message'    => $messageText
+        ]),
+        'timeout' => 20
+    ]);
+
+    if (is_wp_error($response)) {
+        error_log('WhatsApp send error: ' . $response->get_error_message());
+        return false;
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    return ($body['status'] === 'success');
+}
+?&gt;</pre>
+                    </div>
+
+                    <!-- Tab: Python -->
+                    <div id="send-py" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">import requests
+
+url = "https://wpapp.tistack.online/api/v1/send"
+headers = {
+    "Content-Type": "application/json",
+    "X-API-Key": "YOUR_API_KEY"
+}
+payload = {
+    "account_id": "fahadstyles",
+    "to": "923001234567",
+    "message": "{Hello|Hi} customer! Your order has been dispatched."
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())</pre>
+                    </div>
+
+                    <!-- Tab: Node.js -->
+                    <div id="send-js" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">import axios from 'axios';
+
+const res = await axios.post('https://wpapp.tistack.online/api/v1/send', {
+    account_id: 'fahadstyles',
+    to: '923001234567',
+    message: '{Hello|Hi} customer! Your invoice is ready.'
+}, {
+    headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': 'YOUR_API_KEY'
+    }
+});
+
+console.log(res.data);</pre>
+                    </div>
+
+                    <!-- Tab: cURL -->
+                    <div id="send-curl" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">curl -X POST https://wpapp.tistack.online/api/v1/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "fahadstyles",
+    "to": "923001234567",
+    "message": "{Hello|Hi} friend! Your verification code is 4921."
+  }'</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Granular Endpoints: Send Media, Voice, Poll -->
+            <section id="endpoint-send-media" class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-400 font-mono text-xs font-bold">POST</span>
+                        <span>/api/v1/send/media</span>
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">Image, Video, Document</span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-400">Send an image, video, document (PDF, Excel, Word, ZIP), or audio file via direct URL or Base64 data string.</p>
+
+                <div class="glass-panel rounded-2xl p-5 space-y-3">
+                    <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Example cURL Request:</h4>
+                    <pre class="bg-dark-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-200 overflow-x-auto">curl -X POST https://wpapp.tistack.online/api/v1/send/media \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "fahadstyles",
+    "to": "923001234567",
+    "type": "image",
+    "media": "https://example.com/banner.jpg",
+    "caption": "{Check out|Look at} our new summer collection!"
+  }'</pre>
+                </div>
+            </section>
+
+            <!-- 6. Voice Notes PTT -->
+            <section id="endpoint-send-voice" class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-400 font-mono text-xs font-bold">POST</span>
+                        <span>/api/v1/send/voice</span>
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">Push-To-Talk Voice Memo</span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-400">Sends an audio file formatted as an authentic voice recording with real-time microphone presence simulation.</p>
+
+                <div class="glass-panel rounded-2xl p-5 space-y-3">
+                    <pre class="bg-dark-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-200 overflow-x-auto">curl -X POST https://wpapp.tistack.online/api/v1/send/voice \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "fahadstyles",
+    "to": "923001234567",
+    "media": "https://example.com/voice-note.mp3"
+  }'</pre>
+                </div>
+            </section>
+
+            <!-- 7. WhatsApp Polls -->
+            <section id="endpoint-send-poll" class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 font-mono text-xs font-bold">POST</span>
+                        <span>/api/v1/send/poll</span>
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">Interactive WhatsApp Poll</span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-400">Send an interactive poll with custom options directly in the recipient's WhatsApp chat.</p>
+
+                <div class="glass-panel rounded-2xl p-5 space-y-3">
+                    <pre class="bg-dark-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-200 overflow-x-auto">curl -X POST https://wpapp.tistack.online/api/v1/send/poll \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "fahadstyles",
+    "to": "923001234567",
+    "name": "How was your delivery experience?",
+    "values": ["⭐⭐⭐⭐⭐ Excellent", "⭐⭐⭐⭐ Good", "⭐⭐ Average"],
+    "selectableCount": 1
+  }'</pre>
+                </div>
+            </section>
+
+            <!-- 8. 8-Digit Pairing Code -->
+            <section id="endpoint-pairing-code" class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-400 font-mono text-xs font-bold">POST</span>
+                        <span>/api/v1/sessions/{alias}/pairing-code</span>
+                    </h2>
+                    <span class="text-xs text-slate-400 font-mono">Camera-Free Linking</span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-400">Generates an 8-character pairing code so you can link WhatsApp using phone number instead of scanning a QR code.</p>
+
+                <div class="glass-panel rounded-2xl p-5 space-y-3">
+                    <pre class="bg-dark-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-200 overflow-x-auto">curl -X POST https://wpapp.tistack.online/api/v1/sessions/fahadstyles/pairing-code \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "phoneNumber": "923001234567"
+  }'</pre>
+                </div>
+            </section>
+
+            <!-- 9. Anti-Ban Guide -->
+            <section id="anti-ban-guide" class="space-y-4">
+                <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i data-lucide="shield" class="w-5 h-5 text-emerald-400"></i>
+                    <span>Anti-Ban Best Practices & Spintax Guide</span>
+                </h2>
+                <div class="glass-panel rounded-2xl p-6 space-y-4 text-xs sm:text-sm text-slate-300">
+                    <p>Meta uses AI to detect automated bots on WhatsApp. Follow these four golden rules to ensure your WhatsApp accounts are never banned:</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div class="bg-dark-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+                            <div class="font-bold text-white flex items-center space-x-1.5">
+                                <span class="w-2 h-2 rounded-full bg-wa-500"></span>
+                                <span>1. Always Use Spintax</span>
+                            </div>
+                            <p class="text-slate-400 text-xs">Never send 100 identical messages. Use <code class="text-emerald-400">{Hello|Hi|Greetings} {friend|customer}</code> so every dispatched message has a unique cryptographic hash.</p>
+                        </div>
+
+                        <div class="bg-dark-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+                            <div class="font-bold text-white flex items-center space-x-1.5">
+                                <span class="w-2 h-2 rounded-full bg-wa-500"></span>
+                                <span>2. Don't Blast Instant Bursts</span>
+                            </div>
+                            <p class="text-slate-400 text-xs">Our platform automatically enqueues messages with randomized 4s–10s jitter delays. Never bypass the queue by firing 50 simultaneous parallel threads.</p>
+                        </div>
+
+                        <div class="bg-dark-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+                            <div class="font-bold text-white flex items-center space-x-1.5">
+                                <span class="w-2 h-2 rounded-full bg-wa-500"></span>
+                                <span>3. Warm Up Fresh Numbers</span>
+                            </div>
+                            <p class="text-slate-400 text-xs">If you connected a brand-new SIM, start with 30 messages on Day 1, 60 on Day 2, and 120 on Day 3. Our Warm-Up schedule enforces this automatically.</p>
+                        </div>
+
+                        <div class="bg-dark-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+                            <div class="font-bold text-white flex items-center space-x-1.5">
+                                <span class="w-2 h-2 rounded-full bg-wa-500"></span>
+                                <span>4. Dedicated Session Proxies</span>
+                            </div>
+                            <p class="text-slate-400 text-xs">If you manage 5+ accounts on one VPS, assign a residential or static HTTP/SOCKS5 proxy to each session in the Account Cockpit to isolate IP footprints.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 10. Webhooks -->
+            <section id="webhooks" class="space-y-4">
+                <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                    <i data-lucide="webhook" class="w-5 h-5 text-cyan-400"></i>
+                    <span>Incoming Webhooks & Callbacks</span>
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-400">Receive real-time HTTP POST notifications whenever an incoming WhatsApp message arrives or when a delivery status updates.</p>
+
+                <div class="glass-panel rounded-2xl p-5 space-y-3">
+                    <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Sample Webhook Payload:</h4>
+                    <pre class="bg-dark-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-200 overflow-x-auto">{
+  "event": "message.received",
+  "timestamp": "2026-09-11T05:30:15Z",
+  "data": {
+    "sessionId": "fahadstyles",
+    "messageId": "3EB09F8421...",
+    "from": "923001234567@s.whatsapp.net",
+    "phone": "923001234567",
+    "pushName": "John Doe",
+    "type": "text",
+    "body": "Hello, I would like to know the status of my order."
+  }
+}</pre>
+                    <p class="text-xs text-slate-400">If a Webhook Secret is configured in <code class="text-white">.env</code> or session settings, the payload will include an HMAC SHA-256 signature in the <code class="text-emerald-400">X-Hub-Signature-256</code> header.</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function switchCodeTab(tabId, btn) {
+            const container = btn.closest('.glass-panel');
+            container.querySelectorAll('.code-tab-content').forEach(el => el.classList.add('hidden'));
+            container.querySelectorAll('.code-tab-btn').forEach(b => {
+                b.classList.remove('border-wa-500', 'text-wa-500');
+                b.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            btn.classList.add('border-wa-500', 'text-wa-500');
+            btn.classList.remove('border-transparent', 'text-slate-400');
+        }
+    </script>
+</body>
+</html>

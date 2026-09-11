@@ -680,6 +680,10 @@ def regenerate_api_key():
 # ==========================================
 @app.route('/docs')
 def docs():
+    return render_template('docs.html')
+
+@app.route('/docs/swagger')
+def docs_swagger():
     return render_template('swagger.html')
 
 @app.route('/redoc')
@@ -897,10 +901,151 @@ def api_send_reaction():
 
     return jsonify(res)
 
-# Backwards compatible send endpoint
+# ==============================================================================
+# UNIVERSAL / LEGACY SEND ENDPOINT (FAHAD STYLES & E-COMMERCE 100% COMPATIBLE)
+# ==============================================================================
 @app.route('/api/v1/send', methods=['POST'])
 def api_send_legacy():
-    return api_send_text()
+    user = get_user_from_api_key()
+    if not user:
+        return jsonify({"error": "Unauthorized. Invalid or missing X-API-Key"}), 401
+
+    data = request.json or {}
+    account_alias = data.get('account_id') or data.get('account')
+    to = data.get('to')
+    message = data.get('message') or data.get('text') or ''
+    media = data.get('media') or data.get('url')
+    msg_type = data.get('type', 'text' if not media else 'image')
+    caption = data.get('caption', message)
+    file_name = data.get('fileName') or data.get('filename') or 'file.pdf'
+
+    if not account_alias or not to or (not message and not media):
+        return jsonify({"error": "Missing params. Required: account_id, to, message"}), 400
+
+    clean_alias = str(account_alias).strip()
+    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=clean_alias).first()
+    if not account:
+        # Case-insensitive fallback
+        accounts = WhatsappAccount.query.filter_by(user_id=user.id).all()
+        for acc in accounts:
+            if acc.alias.lower() == clean_alias.lower():
+                account = acc
+                break
+
+    if not account:
+        return jsonify({"error": f"Account '{account_alias}' not found"}), 404
+
+    # Handle bulk or single recipients
+    recipients = []
+    if isinstance(to, list):
+        recipients = to
+    elif isinstance(to, str):
+        if ',' in to:
+            recipients = [num.strip() for num in to.split(',') if num.strip()]
+        else:
+            recipients = [to.strip()]
+    elif isinstance(to, (int, float)):
+        recipients = [str(int(to))]
+
+    # Clean duplicates preserving order
+    seen = set()
+    cleaned_recipients = []
+    for r in recipients:
+        r_clean = str(r).strip()
+        if r_clean and r_clean not in seen:
+            seen.add(r_clean)
+            cleaned_recipients.append(r_clean)
+
+    if not cleaned_recipients:
+        return jsonify({"error": "No valid recipients provided in 'to'"}), 400
+
+    results = []
+    success_count = 0
+    total = len(cleaned_recipients)
+
+    for recipient in cleaned_recipients:
+        try:
+            payload = {
+                'to': recipient,
+                'type': msg_type,
+                'message': message,
+                'text': message
+            }
+            if media:
+                payload['media'] = media
+                payload['caption'] = caption
+                payload['fileName'] = file_name
+
+            bridge_res = proxy_bridge('POST', f'/session/{account.session_id}/send', payload, timeout=25)
+
+            if bridge_res and bridge_res.get('success'):
+                success_count += 1
+                msg_id = bridge_res.get('messageId')
+                target_jid = bridge_res.get('jid') or f"{recipient}@s.whatsapp.net"
+                results.append({
+                    'to': recipient,
+                    'status': 'sent',
+                    'response': {
+                        'success': True,
+                        'messageId': msg_id,
+                        'jid': target_jid
+                    }
+                })
+                log = MessageLog(
+                    user_id=user.id,
+                    account_id=account.id,
+                    recipient=recipient,
+                    message_type=msg_type,
+                    content_preview=(message or caption)[:120],
+                    status='sent',
+                    message_id=msg_id
+                )
+                db.session.add(log)
+            else:
+                err_msg = bridge_res.get('error') if bridge_res else 'Bridge error'
+                results.append({
+                    'to': recipient,
+                    'status': 'failed',
+                    'error': err_msg
+                })
+                log = MessageLog(
+                    user_id=user.id,
+                    account_id=account.id,
+                    recipient=recipient,
+                    message_type=msg_type,
+                    content_preview=(message or caption)[:120],
+                    status='failed',
+                    error_message=err_msg
+                )
+                db.session.add(log)
+        except Exception as e:
+            results.append({
+                'to': recipient,
+                'status': 'failed',
+                'error': str(e)
+            })
+            log = MessageLog(
+                user_id=user.id,
+                account_id=account.id,
+                recipient=recipient,
+                message_type=msg_type,
+                content_preview=(message or caption)[:120],
+                status='failed',
+                error_message=str(e)
+            )
+            db.session.add(log)
+
+    db.session.commit()
+
+    overall_status = 'success' if success_count == total else ('partial_success' if success_count > 0 else 'failed')
+    return jsonify({
+        'status': overall_status,
+        'success': success_count > 0,
+        'total': total,
+        'successful': success_count,
+        'failed': total - success_count,
+        'details': results
+    })
 
 @app.route('/api/v1/sessions', methods=['GET'])
 def api_list_sessions():

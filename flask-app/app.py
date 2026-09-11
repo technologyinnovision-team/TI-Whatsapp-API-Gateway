@@ -758,9 +758,10 @@ def resolve_user_account(user_id, account_identifier):
     """
     Universally resolves a user's WhatsApp account by:
     1. Integer database ID (e.g. 1 or "1")
-    2. Exact alias (e.g. "fahadstyles")
-    3. Case-insensitive alias (e.g. "FahadStyles")
-    4. Session UUID (e.g. "ad3eb97b-1aaf-482c-ae22-303bb36e16da")
+    2. Exact alias (e.g. "Fahad  Styles")
+    3. Case-insensitive alias (e.g. "fahad  styles")
+    4. Normalized space/symbol alias (e.g. "fahadstyles" matches "Fahad  Styles")
+    5. Session UUID (e.g. "ad3eb97b-1aaf-482c-ae22-303bb36e16da")
     """
     if not account_identifier:
         return None
@@ -776,6 +777,13 @@ def resolve_user_account(user_id, account_identifier):
     for item in accounts:
         if item.alias.lower() == raw.lower():
             return item
+    # Normalized alphanumeric matching (ignores extra spaces, hyphens, underscores)
+    norm_search = "".join(c for c in raw.lower() if c.isalnum())
+    if norm_search:
+        for item in accounts:
+            norm_alias = "".join(c for c in item.alias.lower() if c.isalnum())
+            if norm_alias and norm_alias == norm_search:
+                return item
     acc = WhatsappAccount.query.filter_by(user_id=user_id, session_id=raw).first()
     if acc:
         return acc

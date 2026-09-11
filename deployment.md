@@ -1,173 +1,172 @@
-# Deployment Guide for CloudPanel (Flask + Node.js)
+# Production Deployment Guide: WhatsApp Enterprise API Gateway
 
-Target Server Path: `/home/tistack-wpapp/htdocs/wpapp.tistack.online`
+This guide covers deployment options for **Linux VPS (Standalone)**, **Docker & Docker Compose**, **CloudPanel**, and **Nginx Reverse Proxy with Let's Encrypt SSL**.
 
-## 1. Prerequisites
+---
 
-Ensure you have the following installed on the server (CloudPanel default usually covers these, but verify):
-- **Python 3.x**
-- **Node.js 20+** (Required for WhatsApp libraries)
-- **Pip**
-- **Virtualenv** (`sudo apt install python3-venv` if missing)
+## Option 1: Standalone Linux VPS (Recommended)
 
-## 2. File Upload
-
-Upload the following files/folders from your local `Development` folder to the server at `/home/tistack-wpapp/htdocs/wpapp.tistack.online/`:
-1.  `flask-app/` (folder)
-2.  `wa-bridge/` (folder)
-3.  `supervisord.conf` (file)
-
-**Note:** Do NOT upload `node_modules` or `__pycache__` folders. We will generate them on the server.
-
-## 3. Server Setup Steps
-
-SSH into your server:
-```bash
-ssh root@srv1124688
-cd /home/tistack-wpapp/htdocs/wpapp.tistack.online/
-```
-
-### A. Python (Flask) Setup
-
-1.  **Create Virtual Environment:**
-    ```bash
-    python3 -m venv venv
-    ```
-
-2.  **Activate and Install Dependencies:**
-    ```bash
-    source venv/bin/activate
-    pip install -r flask-app/requirements.txt
-    deactivate
-    ```
-
-### B. Node.js (Bridge) Setup
-
-**CRITICAL:** The WhatsApp library requires Node.js v20. If the previous script failed, use this **MANUAL METHOD** to force the new repository:
+### 1. One-Line Automated Installation
+Run the following command on any clean Ubuntu, Debian, CentOS, AlmaLinux, or Rocky Linux VPS:
 
 ```bash
-# 1. Clean up old references
-sudo apt-get remove -y nodejs libnode*
-sudo rm -rf /etc/apt/sources.list.d/nodesource.list
-sudo rm -rf /usr/share/keyrings/nodesource.gpg
-
-# 2. Add dependencies
-sudo apt-get update
-sudo apt-get install -y ca-certificates curl gnupg
-
-# 3. Manually add the Node.js 20 GPG key and Repository
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-
-# 4. Install
-sudo apt-get update
-sudo apt-get install -y nodejs
-
-# 5. Verify (Must show v20.x.x)
-node -v
+curl -sSL https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsapp-API/main/install.sh | bash
 ```
 
-1.  **Install Dependencies:**
-    ```bash
-    cd wa-bridge
-    npm install
-    cd ..
-    ```
+The script automatically:
+* Installs Node.js 20+ LTS, Python 3, pip, and build tools.
+* Scans for port conflicts on `5000` and `3001` (auto-allocates next available ports if in-use).
+* Sets up the Python virtual environment and installs dependencies.
+* Generates secure cryptographic secrets in `.env`.
+* Configures and starts `whatsapp-bridge.service` and `whatsapp-web.service` via Systemd.
+* Installs the `whatsapp-ctl` command line manager.
 
-### C. Supervisor Setup (Process Management)
+### 2. Service Management
+```bash
+# Check status of both services
+whatsapp-ctl status
 
-We use `supervisord` to keep your apps running.
+# View live consolidated logs
+whatsapp-ctl logs
 
-1.  **Start Supervisor:**
-    ```bash
-    # Check if supervisor is already running; if not, start it with your config
-    supervisord -c supervisord.conf
-    ```
+# Restart services
+whatsapp-ctl restart
+```
 
-2.  **Check Status:**
-    ```bash
-    supervisorctl -c supervisord.conf status
-    ```
-    You should see both `flask-app` and `wa-bridge` showing as `RUNNING`.
+---
 
-    *Useful Commands:*
-    - Restart all: `supervisorctl -c supervisord.conf restart all`
-    - Stop all: `supervisorctl -c supervisord.conf stop all`
-    - Reload config: `supervisorctl -c supervisord.conf reload`
+## Option 2: Docker & Docker Compose
 
-## 4. CloudPanel Nginx Configuration
+For containerized environments, deploy using the included `docker-compose.yml`:
 
-You need to update the Vhost to proxy traffic to your Flask app (running on port 5000) and support WebSockets/headers.
+```bash
+# 1. Clone repository
+git clone https://github.com/technologyinnovision-team/TI-Whatsapp-API.git /opt/whatsapp-gateway
+cd /opt/whatsapp-gateway
 
-1.  Go to your CloudPanel Dashboard.
-2.  Navigate to **Sites** -> `wpapp.tistack.online`.
-3.  Go to the **Vhost** tab.
-4.  **Replace the entire content** with the following configuration:
+# 2. Configure Environment
+cp .env.example .env
+nano .env  # Edit ports or secrets if desired
+
+# 3. Launch Containers
+docker compose up -d --build
+
+# 4. View Container Status
+docker compose ps
+docker compose logs -f
+```
+
+---
+
+## Option 3: CloudPanel Deployment
+
+If you are hosting on a server with CloudPanel:
+
+### 1. Create a Reverse Proxy Site
+1. Log into your CloudPanel admin interface.
+2. Navigate to **Sites** &rarr; **Add Site** &rarr; **Reverse Proxy Site**.
+3. Set **Domain Name**: `wpapi.yourdomain.com`
+4. Set **Reverse Proxy URL**: `http://127.0.0.1:5000`
+
+### 2. Deploy Project Code
+SSH into your server and clone into the site directory:
+```bash
+cd /home/YOUR_USER/htdocs/wpapi.yourdomain.com
+git clone https://github.com/technologyinnovision-team/TI-Whatsapp-API.git .
+./install.sh
+```
+
+### 3. Update Vhost Configuration in CloudPanel
+Go to **Sites** &rarr; `wpapi.yourdomain.com` &rarr; **Vhost** tab, and ensure the configuration proxies WebSockets and headers properly:
 
 ```nginx
 server {
   listen 80;
   listen [::]:80;
-  listen 443 quic;
-  listen 443 ssl;
-  listen [::]:443 quic;
-  listen [::]:443 ssl;
-  http2 on;
-  http3 off;
-  {{ssl_certificate_key}}
-  {{ssl_certificate}}
-  server_name wpapp.tistack.online;
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name wpapi.yourdomain.com;
   {{root}}
 
-  {{nginx_access_log}}
-  {{nginx_error_log}}
+  {{ssl_certificate}}
+  {{ssl_certificate_key}}
 
   if ($scheme != "https") {
     rewrite ^ https://$host$request_uri permanent;
   }
 
-  location ~ /.well-known {
-    auth_basic off;
-    allow all;
-  }
-
-  {{settings}}
-
-  include /etc/nginx/global_settings;
-
-  index index.html;
-
   location / {
     proxy_pass http://127.0.0.1:5000/;
     proxy_http_version 1.1;
-    proxy_set_header X-Forwarded-Host $host;
-    proxy_set_header X-Forwarded-Server $host;
+    proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Host $host;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "Upgrade";
-    proxy_pass_request_headers on;
-    proxy_max_temp_file_size 0;
-    proxy_connect_timeout 900;
-    proxy_send_timeout 900;
-    proxy_read_timeout 900;
-    proxy_buffer_size 128k;
-    proxy_buffers 4 256k;
-    proxy_busy_buffers_size 256k;
-    proxy_temp_file_write_size 256k;
+    proxy_read_timeout 900s;
+    proxy_connect_timeout 900s;
   }
 }
 ```
 
-5.  **Save** the configuration.
+---
 
-## 5. Verification
+## Option 4: Manual Nginx Reverse Proxy with Let's Encrypt SSL
 
-Visit `https://wpapp.tistack.online`.
-- You should see the Flask app.
-- Login and test connection.
-- The Flask app will internally talk to `http://localhost:3000` (wa-bridge) which is managed by Supervisor.
+For standard Ubuntu/Debian servers using Certbot and Nginx:
+
+```bash
+sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx
+```
+
+Create `/etc/nginx/sites-available/whatsapp-gateway`:
+
+```nginx
+server {
+    server_name api.yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_read_timeout 600s;
+        client_max_body_size 50M;
+    }
+}
+```
+
+Enable site and acquire SSL certificate:
+```bash
+sudo ln -s /etc/nginx/sites-available/whatsapp-gateway /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx -d api.yourdomain.com
+```
+
+---
+
+## 🔧 Port & Network Troubleshooting
+
+If you encounter port conflicts:
+1. View active listeners:
+   ```bash
+   whatsapp-ctl ports
+   # or
+   ss -tuln | grep -E ':(5000|3001) '
+   ```
+2. Change ports anytime in `/opt/whatsapp-gateway/.env`:
+   ```ini
+   WEB_PORT=5005
+   BRIDGE_PORT=3002
+   BRIDGE_URL=http://127.0.0.1:3002
+   ```
+3. Restart services:
+   ```bash
+   whatsapp-ctl restart
+   ```

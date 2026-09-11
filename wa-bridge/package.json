@@ -9,10 +9,15 @@
     },
     "dependencies": {
         "@whiskeysockets/baileys": "^6.7.9",
+        "axios": "^1.20.0",
         "cors": "^2.8.5",
+        "dotenv": "^17.4.2",
         "express": "^4.21.1",
+        "https-proxy-agent": "^9.1.0",
+        "mime-types": "^3.0.2",
         "pino": "^9.5.0",
         "qrcode": "^1.5.4",
+        "socks-proxy-agent": "^10.1.0",
         "uuid": "^13.0.0"
     }
 }

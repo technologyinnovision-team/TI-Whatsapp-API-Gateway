@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
-
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WhatsApp API Gateway{% endblock %} | Technology Innovision</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -11,87 +12,195 @@
             theme: {
                 extend: {
                     colors: {
-                        slate: { 850: '#151e2e' }
+                        wa: {
+                            50: '#eefcf4',
+                            100: '#d6f7e4',
+                            500: '#25D366',
+                            600: '#128C7E',
+                            700: '#075E54',
+                            800: '#0b3b35',
+                            900: '#062622'
+                        },
+                        dark: {
+                            900: '#0b1118',
+                            800: '#121a24',
+                            700: '#1a2432',
+                            600: '#253244',
+                            500: '#334155'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
                     }
                 }
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
+        body { font-family: 'Inter', sans-serif; }
+        code, pre { font-family: 'JetBrains Mono', monospace; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: #253244; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        .glass-card {
+            background: rgba(18, 26, 36, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+<body class="bg-dark-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-wa-500 selection:text-dark-900">
 
-<body class="bg-slate-900 text-slate-50 overflow-hidden h-screen flex">
-
-    <!-- Sidebar -->
-    <aside
-        class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col h-full shrink-0 transition-all duration-300">
-        <div class="h-16 flex items-center px-6 border-b border-slate-700">
-            <div class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
-                <i class="fab fa-whatsapp mr-2"></i> WA Platform
+    <!-- Top Navigation / Header -->
+    <header class="border-b border-slate-800/80 bg-dark-800/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-wa-500 to-wa-700 flex items-center justify-center shadow-lg shadow-wa-500/20">
+                    <i data-lucide="message-square" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">WhatsApp API Gateway</span>
+                    <span class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-wa-500/10 text-wa-500 border border-wa-500/20">v2.0 Anti-Ban</span>
+                </div>
             </div>
-        </div>
 
-        <nav class="flex-1 px-4 py-6 space-y-2">
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('dashboard') }}"
-                class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors {{ 'bg-slate-700 text-emerald-400' if request.endpoint == 'dashboard' else 'text-slate-400 hover:text-white' }}">
-                <i class="fas fa-grid-2 w-6"></i>
-                <span class="font-medium">Dashboard</span>
-            </a>
-
-            <a href="{{ url_for('docs') }}" target="_blank"
-                class="flex items-center px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-colors">
-                <i class="fas fa-book w-6"></i>
-                <span class="font-medium">API Docs</span>
-            </a>
-
-            <div class="pt-6 mt-6 border-t border-slate-700 px-2">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">User</div>
-                <div class="flex items-center px-2 py-2 mb-4">
-                    <div
-                        class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-xs">
-                        {{ current_user.username[0].upper() }}
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-medium text-white">{{ current_user.username }}</p>
-                        <p class="text-xs text-slate-500">Pro Plan</p>
-                    </div>
+            <div class="flex items-center space-x-4">
+                <!-- API Key Quick View -->
+                <div class="hidden md:flex items-center space-x-2 bg-dark-700/60 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
+                    <i data-lucide="key" class="w-3.5 h-3.5 text-wa-500"></i>
+                    <span class="font-mono text-slate-400">Key:</span>
+                    <span class="font-mono text-slate-200 truncate max-w-[120px]">{{ current_user.api_key[:10] }}...</span>
+                    <button onclick="copyApiKey('{{ current_user.api_key }}')" class="hover:text-wa-500 text-slate-400 p-1" title="Copy Full API Key">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    </button>
                 </div>
 
-                <a href="{{ url_for('logout') }}"
-                    class="flex items-center px-4 py-2 rounded-lg text-red-400 hover:bg-slate-700/50 hover:text-red-300 transition-colors text-sm">
-                    <i class="fas fa-sign-out-alt w-6"></i>
-                    <span>Logout</span>
-                </a>
+                <!-- User Profile -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full bg-dark-600 border border-slate-700 flex items-center justify-center text-sm font-semibold text-wa-500">
+                        {{ current_user.username[0]|upper }}
+                    </div>
+                    <span class="hidden sm:inline text-sm font-medium text-slate-300">{{ current_user.username }}</span>
+                    <a href="{{ url_for('logout') }}" class="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition" title="Logout">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </a>
+                </div>
             </div>
             {% else %}
-            <a href="{{ url_for('login') }}"
-                class="flex items-center px-4 py-3 rounded-lg {{ 'bg-slate-700 text-emerald-400' if request.endpoint == 'login' else 'text-slate-400 hover:text-white' }}">
-                <i class="fas fa-sign-in-alt w-6"></i>
-                <span>Login</span>
-            </a>
-            <a href="{{ url_for('signup') }}"
-                class="flex items-center px-4 py-3 rounded-lg {{ 'bg-slate-700 text-emerald-400' if request.endpoint == 'signup' else 'text-slate-400 hover:text-white' }}">
-                <i class="fas fa-user-plus w-6"></i>
-                <span>Sign Up</span>
-            </a>
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('login') }}" class="text-sm font-medium text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition">Login</a>
+                <a href="{{ url_for('signup') }}" class="text-sm font-semibold bg-wa-500 hover:bg-wa-600 text-dark-900 px-4 py-1.5 rounded-lg shadow-sm transition">Sign Up</a>
+            </div>
             {% endif %}
-        </nav>
-    </aside>
+        </div>
+
+        {% if current_user.is_authenticated %}
+        <!-- Sub-Navigation Links -->
+        <div class="border-t border-slate-800/60 bg-dark-800/40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 overflow-x-auto py-2">
+                <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition {% if request.endpoint == 'dashboard' or request.endpoint == 'view_account' %}bg-dark-700 text-white border border-slate-700{% else %}text-slate-400 hover:text-slate-200 hover:bg-dark-700/50{% endif %}">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-wa-500"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('campaigns') }}" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition {% if request.endpoint == 'campaigns' %}bg-dark-700 text-white border border-slate-700{% else %}text-slate-400 hover:text-slate-200 hover:bg-dark-700/50{% endif %}">
+                    <i data-lucide="send" class="w-4 h-4 text-blue-400"></i>
+                    <span>Campaigns</span>
+                </a>
+                <a href="{{ url_for('chatbot') }}" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition {% if request.endpoint == 'chatbot' %}bg-dark-700 text-white border border-slate-700{% else %}text-slate-400 hover:text-slate-200 hover:bg-dark-700/50{% endif %}">
+                    <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i>
+                    <span>Auto-Responder</span>
+                </a>
+                <a href="{{ url_for('messages') }}" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition {% if request.endpoint == 'messages' %}bg-dark-700 text-white border border-slate-700{% else %}text-slate-400 hover:text-slate-200 hover:bg-dark-700/50{% endif %}">
+                    <i data-lucide="inbox" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Message Logs</span>
+                </a>
+                <a href="{{ url_for('settings') }}" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition {% if request.endpoint == 'settings' %}bg-dark-700 text-white border border-slate-700{% else %}text-slate-400 hover:text-slate-200 hover:bg-dark-700/50{% endif %}">
+                    <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
+                    <span>System & Ports</span>
+                </a>
+                <a href="{{ url_for('docs') }}" target="_blank" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-dark-700/50 transition">
+                    <i data-lucide="book-open" class="w-4 h-4 text-cyan-400"></i>
+                    <span>API Docs</span>
+                    <i data-lucide="external-link" class="w-3 h-3 text-slate-500"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </header>
+
+    <!-- Flash Alerts -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-3 p-4 rounded-xl flex items-center justify-between border {% if category == 'success' %}bg-emerald-950/40 border-emerald-800/80 text-emerald-300{% elif category == 'error' %}bg-red-950/40 border-red-800/80 text-red-300{% else %}bg-blue-950/40 border-blue-800/80 text-blue-300{% endif %}">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="{% if category == 'success' %}check-circle-2{% elif category == 'error' %}alert-triangle{% else %}info{% endif %}" class="w-5 h-5 flex-shrink-0"></i>
+                            <span class="text-sm font-medium">{{ message }}</span>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto bg-slate-900 relative">
-        <div class="container mx-auto px-8 py-8 max-w-6xl">
-            {% block content %}{% endblock %}
-        </div>
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        {% block content %}{% endblock %}
     </main>
 
-</body>
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-dark-800/60 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+            <div>
+                © 2026 <span class="text-slate-400 font-semibold">Technology Innovision</span> — Enterprise WhatsApp API Gateway
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="inline-flex items-center text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span> Anti-Ban Active
+                </span>
+                <a href="{{ url_for('docs') }}" class="hover:text-slate-300 transition">Interactive Docs</a>
+                <a href="{{ url_for('redoc') }}" class="hover:text-slate-300 transition">ReDoc</a>
+            </div>
+        </div>
+    </footer>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-dark-700 border border-slate-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-sm">
+        <i data-lucide="check" class="w-4 h-4 text-wa-500"></i>
+        <span id="toast-message">Copied to clipboard</span>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        function copyApiKey(key) {
+            navigator.clipboard.writeText(key).then(() => {
+                showToast('API Key copied to clipboard!');
+            });
+        }
+    </script>
+</body>
 </html>

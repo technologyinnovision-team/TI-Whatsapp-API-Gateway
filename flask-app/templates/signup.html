@@ -1,43 +1,56 @@
 {% extends "layout.html" %}
+
+{% block title %}Create Account{% endblock %}
+
 {% block content %}
-<div class="flex items-center justify-center min-h-[80vh]">
-    <div class="bg-slate-800 rounded-xl border border-slate-700 p-8 w-full max-w-md shadow-2xl">
-        <h1 class="text-3xl font-bold text-center mb-2">Create Account</h1>
-        <p class="text-slate-400 text-center mb-8">Start your journey with us</p>
+<div class="min-h-[75vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="glass-card rounded-3xl p-8 border border-slate-700/80 max-w-md w-full shadow-2xl space-y-6">
+        <div class="text-center space-y-2">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-wa-500 to-wa-700 flex items-center justify-center mx-auto shadow-xl shadow-wa-500/20">
+                <i data-lucide="user-plus" class="w-7 h-7 text-white"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold text-white tracking-tight">Create Account</h2>
+            <p class="text-xs text-slate-400">Initialize your WhatsApp Multi-Tenant Gateway admin</p>
+        </div>
 
         {% if error %}
-        <div class="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded mb-6 text-sm text-center">
-            {{ error }}
+        <div class="p-3.5 rounded-xl bg-red-950/40 border border-red-800/80 text-red-300 text-xs flex items-center space-x-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+            <span>{{ error }}</span>
         </div>
         {% endif %}
 
-        <form method="POST" class="space-y-4">
+        <form action="{{ url_for('signup') }}" method="POST" class="space-y-4">
             <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Choose
-                    Username</label>
-                <input type="text" name="username"
-                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
-                    placeholder="e.g. johndoe" required>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Username</label>
+                <div class="relative">
+                    <input type="text" name="username" required autofocus placeholder="Choose an admin username" class="w-full bg-dark-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                    </div>
+                </div>
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Choose
-                    Password</label>
-                <input type="password" name="password"
-                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
-                    placeholder="••••••••" required>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Password</label>
+                <div class="relative">
+                    <input type="password" name="password" required placeholder="Choose a secure password" class="w-full bg-dark-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                    </div>
+                </div>
             </div>
 
-            <button type="submit"
-                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition-colors mt-2">
-                Get Started <i class="fas fa-rocket ml-2 opacity-70"></i>
+            <button type="submit" class="w-full bg-wa-500 hover:bg-wa-600 text-dark-900 font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-wa-500/20 transition text-sm flex items-center justify-center space-x-2">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>Register & Get API Key</span>
             </button>
         </form>
 
-        <p class="mt-8 text-center text-slate-400 text-sm">
-            Already have an account? <a href="{{ url_for('login') }}"
-                class="text-emerald-400 hover:text-emerald-300 font-medium">Sign in</a>
-        </p>
+        <div class="text-center pt-2 border-t border-slate-800 text-xs text-slate-400">
+            Already have an account? 
+            <a href="{{ url_for('login') }}" class="text-wa-500 hover:underline font-semibold ml-1">Sign In</a>
+        </div>
     </div>
 </div>
 {% endblock %}

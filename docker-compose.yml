@@ -1,0 +1,45 @@
+services:
+  wa-bridge:
+    build:
+      context: ./wa-bridge
+      dockerfile: Dockerfile
+    container_name: whatsapp-bridge
+    restart: unless-stopped
+    ports:
+      - "${BRIDGE_PORT:-3001}:3001"
+    environment:
+      - BRIDGE_PORT=3001
+      - NODE_ENV=production
+      - AUTH_DIR=./auth_info
+      - GLOBAL_WEBHOOK_URL=${GLOBAL_WEBHOOK_URL:-}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+    volumes:
+      - ./wa-bridge/auth_info:/app/auth_info
+    networks:
+      - wa-network
+
+  whatsapp-web:
+    build:
+      context: ./flask-app
+      dockerfile: Dockerfile
+    container_name: whatsapp-web-gateway
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-5000}:5000"
+    environment:
+      - WEB_PORT=5000
+      - BRIDGE_PORT=3001
+      - BRIDGE_URL=http://wa-bridge:3001
+      - SECRET_KEY=${SECRET_KEY:-default_secret_key_change_me}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///whatsapp_gateway.db}
+    volumes:
+      - ./flask-app/whatsapp_gateway.db:/app/whatsapp_gateway.db
+    depends_on:
+      wa-bridge:
+        condition: service_healthy
+    networks:
+      - wa-network
+
+networks:
+  wa-network:
+    driver: bridge

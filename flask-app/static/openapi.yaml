@@ -1,11 +1,18 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
-  title: WhatsApp Multi-Tenant Platform API
-  description: Send WhatsApp messages programmatically using your connected accounts.
-  version: 1.0.0
+  title: Technology Innovision WhatsApp Enterprise API Gateway
+  description: |
+    Enterprise-grade, multi-tenant WhatsApp REST API with built-in Anti-Ban protection engine,
+    human presence simulation, spintax randomization, media attachments, PTT voice notes,
+    WhatsApp polls, interactive pairing codes, and event webhooks.
+  version: 2.0.0
+  contact:
+    name: Technology Innovision
+    url: https://technologyinnovision.com
+
 servers:
-  - url: http://localhost:5000/api/v1
-    description: Local Development Server
+  - url: /api/v1
+    description: Current Gateway Server
 
 components:
   securitySchemes:
@@ -13,15 +20,21 @@ components:
       type: apiKey
       in: header
       name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
 
 security:
   - ApiKeyAuth: []
+  - BearerAuth: []
 
 paths:
-  /send:
+  /send/text:
     post:
-      summary: Send a Message
-      description: Sends a text message from a connected WhatsApp account to a destination number.
+      summary: Send Text Message (Anti-Ban & Spintax)
+      description: |
+        Dispatches a text message with Anti-Ban token-bucket queuing and dynamic human typing simulation.
+        Supports Spintax variation syntax (e.g. `{Hello|Hi|Hey} {friend|customer}`).
       requestBody:
         required: true
         content:
@@ -35,35 +48,252 @@ paths:
               properties:
                 account_id:
                   type: string
-                  description: The unique alias of the WhatsApp account you created in the dashboard.
-                  example: "marketing-1"
+                  example: "support_desk"
                 to:
-                  oneOf:
-                    - type: string
-                    - type: array
-                      items:
-                        type: string
-                  description: Destination phone number(s). Can be a single number, a comma-separated string, or an array of numbers.
-                  example: ["923123456789", "923987654321"]
+                  type: string
+                  description: Recipient phone number with country code (e.g. 15551234567)
+                  example: "15551234567"
                 message:
                   type: string
-                  description: The text message content.
-                  example: "Hello from the API!"
+                  description: Text body, optionally containing Spintax
+                  example: "{Hello|Hi} friend! Your verification code is 48291."
       responses:
         '200':
-          description: Message sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  jid:
-                    type: string
-                    example: "923123456789@s.whatsapp.net"
+          description: Message dispatched successfully
         '401':
-          description: Unauthorized (Invalid API Key)
+          description: Unauthorized
         '404':
-          description: Account ID not found
+          description: Account alias not found
+
+  /send/media:
+    post:
+      summary: Send Media (Image, Video, Document, Audio)
+      description: Sends an image, video, document, or audio file via direct URL or Base64 buffer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - media
+              properties:
+                account_id:
+                  type: string
+                  example: "marketing_1"
+                to:
+                  type: string
+                  example: "15551234567"
+                type:
+                  type: string
+                  enum: [image, video, audio, document]
+                  default: image
+                media:
+                  type: string
+                  description: Direct download URL or base64 encoded string
+                  example: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe"
+                caption:
+                  type: string
+                  description: Caption text (Spintax supported)
+                  example: "{Check out|Look at} our new product catalog!"
+                fileName:
+                  type: string
+                  description: Required for documents (e.g. invoice.pdf)
+                  example: "catalog.pdf"
+      responses:
+        '200':
+          description: Media sent successfully
+
+  /send/voice:
+    post:
+      summary: Send Voice Note (PTT)
+      description: Sends an audio recording as a Push-To-Talk (PTT) voice memo with simulated microphone presence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - media
+              properties:
+                account_id:
+                  type: string
+                  example: "support_desk"
+                to:
+                  type: string
+                  example: "15551234567"
+                media:
+                  type: string
+                  description: Audio URL or base64
+                  example: "https://example.com/audio/sample.mp3"
+      responses:
+        '200':
+          description: Voice note dispatched
+
+  /send/poll:
+    post:
+      summary: Send WhatsApp Poll
+      description: Sends an interactive WhatsApp poll with custom question and choice options.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - name
+                - values
+              properties:
+                account_id:
+                  type: string
+                  example: "marketing_1"
+                to:
+                  type: string
+                  example: "15551234567"
+                name:
+                  type: string
+                  example: "Which feature would you like next?"
+                values:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Faster Delivery", "New Colors", "Mobile App"]
+                selectableCount:
+                  type: integer
+                  default: 1
+      responses:
+        '200':
+          description: Poll sent
+
+  /send/location:
+    post:
+      summary: Send Location
+      description: Sends GPS coordinates with venue name and address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - latitude
+                - longitude
+              properties:
+                account_id:
+                  type: string
+                  example: "support_desk"
+                to:
+                  type: string
+                  example: "15551234567"
+                latitude:
+                  type: number
+                  example: 37.7749
+                longitude:
+                  type: number
+                  example: -122.4194
+                name:
+                  type: string
+                  example: "Headquarters"
+                address:
+                  type: string
+                  example: "Market St, San Francisco, CA"
+      responses:
+        '200':
+          description: Location sent
+
+  /send/reaction:
+    post:
+      summary: Send Message Reaction
+      description: Reacts to a previously sent or received WhatsApp message with an emoji.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - reaction
+                - key
+              properties:
+                account_id:
+                  type: string
+                  example: "support_desk"
+                to:
+                  type: string
+                  example: "15551234567"
+                reaction:
+                  type: string
+                  example: "❤️"
+                key:
+                  type: object
+                  description: Message key object (id, remoteJid, fromMe)
+      responses:
+        '200':
+          description: Reaction sent
+
+  /sessions:
+    get:
+      summary: List WhatsApp Sessions
+      description: Returns all configured WhatsApp accounts, live connection statuses, and anti-ban safety scores.
+      responses:
+        '200':
+          description: List of sessions
+
+  /sessions/{alias}/qr:
+    get:
+      summary: Get Session QR Code
+      description: Returns base64 DataURL of the current WhatsApp Web QR code for authentication.
+      parameters:
+        - name: alias
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: QR code image data
+
+  /sessions/{alias}/pairing-code:
+    post:
+      summary: Request 8-Digit Pairing Code
+      description: Generates an 8-character pairing code to link WhatsApp using your phone number without scanning a QR code.
+      parameters:
+        - name: alias
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phoneNumber
+              properties:
+                phoneNumber:
+                  type: string
+                  example: "15551234567"
+      responses:
+        '200':
+          description: Pairing code returned
+
+  /system/health:
+    get:
+      summary: System Health & Ports Status
+      description: Returns CPU usage, RAM memory usage, active web port, and Baileys bridge socket health.
+      responses:
+        '200':
+          description: System health report

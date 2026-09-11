@@ -1,186 +1,257 @@
-# Whatsapp API Gateway
+# WhatsApp Enterprise API Gateway & Anti-Ban Platform (v2.0)
 
-**Whatsapp API Gateway** is a powerful, self-hosted solution that allows you to manage multiple WhatsApp accounts and send messages programmatically via a REST API. Built with a robust **Flask** dashboard and a high-performance **Node.js (Baileys)** bridge, this platform is designed for stability, scalability, and ease of use.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsapp-API/main/flask-app/static/banner.png" alt="WhatsApp API Gateway" width="800" onerror="this.style.display='none'"/>
+</p>
+
+<p align="center">
+  <a href="#-one-line-installer-linux"><img src="https://img.shields.io/badge/Install-1--Line%20Linux%20Command-25D366?style=for-the-badge&logo=linux&logoColor=white" alt="One-Line Install" /></a>
+  <a href="#-docker-deployment"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
+  <a href="#-anti-ban-protection-engine"><img src="https://img.shields.io/badge/Anti--Ban-Protected%20v2.0-059669?style=for-the-badge&logo=shield&logoColor=white" alt="Anti-Ban" /></a>
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
+</p>
+
+---
+
+## 🌟 Overview
+
+**Technology Innovision WhatsApp API Gateway** is a modern, high-performance, self-hosted multi-tenant solution designed to programmatically manage multiple WhatsApp accounts, dispatch messages via a comprehensive REST API, execute bulk campaigns safely, and automate customer responses.
+
+Re-engineered from scratch, version **2.0** introduces an enterprise **Anti-Ban Protection Engine**, **Phone Number Pairing Code** linking (no camera required), **Rich Media & WhatsApp Polls**, **Spintax variation processing**, **Per-Session SOCKS5/HTTP proxies**, and **Dynamic Port Conflict Management**.
+
+---
+
+## ⚡ Quick Start: One-Line Linux Installer
+
+Install and configure everything on any Linux VPS (Ubuntu, Debian, CentOS, AlmaLinux, Rocky, Fedora, Arch, Alpine) with a single command:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsapp-API/main/install.sh | bash
+```
+
+### What the installer handles automatically:
+1. **OS & Architecture Auto-Detection**: Configures package managers and builds.
+2. **Node.js 20+ & Python 3 Setup**: Installs required runtime environments.
+3. **Smart Port Conflict Management**: Tests ports `5000` (Web) and `3001` (Bridge); auto-allocates free ports if busy.
+4. **Zero-Config Database Initialization**: Sets up resilient database layer (SQLite out-of-the-box or prompts for MySQL).
+5. **Generates Cryptographic Secrets**: Generates secure random API keys and session encryption secrets.
+6. **Systemd Background Services**: Configures `whatsapp-bridge.service` and `whatsapp-web.service` with auto-restart on boot.
+7. **Installs Global CLI (`whatsapp-ctl`)**: Provides instant service management from your terminal.
+
+---
+
+## 🐳 Docker Deployment
+
+Run the complete gateway using Docker & Docker Compose:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/technologyinnovision-team/TI-Whatsapp-API.git
+cd TI-Whatsapp-API
+
+# 2. Copy environment configuration
+cp .env.example .env
+
+# 3. Start containers
+docker compose up -d
+```
+
+Access the Web Dashboard at `http://localhost:5000` and Swagger API Docs at `http://localhost:5000/docs`.
+
+---
+
+## 🛡️ Anti-Ban Protection Engine
+
+WhatsApp flags and bans automated accounts primarily due to **burst concurrency**, **zero-jitter intervals**, **identical message hashes**, **missing presence states**, and **IP correlation across multiple accounts**. Our Anti-Ban Engine solves every single one of these factors:
+
+```
+                  ┌─────────────────────────────────────────┐
+                  │       Incoming Outgoing Messages        │
+                  └────────────────────┬────────────────────┘
+                                       ▼
+                  ┌─────────────────────────────────────────┐
+                  │    Per-Session FIFO Async Queue         │
+                  │  (Never fires concurrent socket calls)  │
+                  └────────────────────┬────────────────────┘
+                                       ▼
+                  ┌─────────────────────────────────────────┐
+                  │      Spintax Variation Resolver         │
+                  │   {Hi|Hello|Hey} -> Dynamic variation   │
+                  └────────────────────┬────────────────────┘
+                                       ▼
+                  ┌─────────────────────────────────────────┐
+                  │       Human Simulation Controller       │
+                  │  1. Send 'available' presence           │
+                  │  2. Dynamic typing (35ms/char + jitter) │
+                  │  3. Recording state for voice notes     │
+                  │  4. Send 'paused' -> Dispatch payload   │
+                  └────────────────────┬────────────────────┘
+                                       ▼
+                  ┌─────────────────────────────────────────┐
+                  │       Safe Jitter Interval Delay        │
+                  │      (Randomized 4s - 12s sleep)        │
+                  └────────────────────┬────────────────────┘
+                                       ▼
+                  ┌─────────────────────────────────────────┐
+                  │       Isolated Session Proxy Router     │
+                  │      (SOCKS5 / HTTP Proxy Per Number)   │
+                  └────────────────────┬────────────────────┘
+                                       ▼
+                            WhatsApp Socket Servers
+```
+
+* **Dynamic Human Typing Simulator**: Calculates natural keyboard typing speeds (30–50ms per character) plus randomized human pauses before sending.
+* **PTT Voice Note Presence**: Sets `recording` presence instead of `composing` when sending voice memos.
+* **Built-in Spintax Engine**: Supports `{Hello|Hi|Greetings} {friend|valued client}` to guarantee unique hashes on bulk sends.
+* **Session Warm-Up Schedule**: Enforces safe daily ramps for fresh phone numbers (Day 1: 35, Day 2: 70, Day 3: 140, etc.).
+* **Per-Session Proxy Support**: Route individual WhatsApp numbers through dedicated residential or datacenter SOCKS5/HTTP proxies.
+* **Auto-Offline Presence**: Automatically sends `unavailable` presence after idle periods to prevent "24/7 online" bot detection.
+* **Real-time Safety Score**: Computes a live 0–100% health score for each WhatsApp session.
+
+---
 
 ## 🚀 Key Features
 
-*   **Multi-Tenancy**: Manage multiple WhatsApp accounts (sessions) from a single user dashboard.
-*   **Simple Authentication**: Scan QR codes just like WhatsApp Web to connect accounts.
-*   **REST API**: easy-to-use API for sending messages from your external applications.
-*   **Bulk Messaging**: Send messages to single numbers or broadcast to lists of recipients.
-*   **Human Simulation**: Intelligent "typing" and presence simulation (Online/Offline/Composing) to reduce ban risks.
-*   **Session Persistence**: Automatically restores sessions on restart.
-*   **Status Monitoring**: Real-time connection status and QR code generation for re-linking.
-*   **User Management**: Built-in user authentication, API key generation, and account isolation.
+* **Multi-Tenancy & Multi-Session**: Run and manage multiple WhatsApp accounts in an isolated multi-tenant architecture.
+* **Pairing Code (Camera-Free)**: Link WhatsApp on headless servers or cloud VPS without scanning a QR code by entering an 8-digit code.
+* **Rich Messaging Suite**:
+  * Plain text with Spintax, emojis, and `@phone` mentions.
+  * Media: Images, Videos (with GIF option), Audio, Documents (PDF, ZIP, Word with custom filenames).
+  * Push-to-Talk (PTT) Voice Notes (`audio/ogg; codecs=opus`).
+  * WhatsApp Interactive Polls (single/multi choice).
+  * Contact Cards (vCard).
+  * GPS Location Coordinates.
+  * Emoji Message Reactions (`❤️`, `👍`, etc.).
+* **Bulk Broadcast Studio**: Run scheduled campaigns with CSV/number lists, Spintax variation preview, and live progress bars.
+* **Auto-Responder & Chatbot**: Rule builder matching exact, contains, starts-with, or regex keywords with automated Spintax replies.
+* **Incoming Event Webhooks**: Dispatches real-time webhooks for incoming messages, delivery receipts (sent, delivered, read), and connection states with HMAC SHA-256 signatures.
+* **Interactive API Documentation**: Swagger UI (`/docs`) and ReDoc (`/redoc`) with interactive "Try It Out" consoles.
+* **Modern Dark UI/UX**: Built with Tailwind CSS, Lucide icons, glassmorphism, responsive navigation, and dark mode.
 
 ---
 
-## 🛠 Tech Stack
+## 📡 REST API Reference
 
-*   **Frontend/Backend**: Python (Flask), SQLAlchemy, Jinja2 Templates.
-*   **Bridge/Core**: Node.js, Express, [@whiskeysockets/baileys](https://github.com/WhiskeySockets/Baileys).
-*   **Database**: MySQL / MariaDB.
-*   **Process Management**: Supervisor (recommended for production).
+Authenticate all requests using the `X-API-Key` header or `Authorization: Bearer <key>`.
+
+### 1. Send Text Message
+```bash
+curl -X POST http://localhost:5000/api/v1/send/text \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "support_desk",
+    "to": "15551234567",
+    "message": "{Hello|Hi} friend! Your verification code is 59381."
+  }'
+```
+
+### 2. Send Media (Image, Video, Document)
+```bash
+curl -X POST http://localhost:5000/api/v1/send/media \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "support_desk",
+    "to": "15551234567",
+    "type": "image",
+    "media": "https://example.com/banner.jpg",
+    "caption": "{Check out|Look at} our new update!"
+  }'
+```
+
+### 3. Send Voice Note (PTT)
+```bash
+curl -X POST http://localhost:5000/api/v1/send/voice \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "support_desk",
+    "to": "15551234567",
+    "media": "https://example.com/audio/sample.mp3"
+  }'
+```
+
+### 4. Send Interactive Poll
+```bash
+curl -X POST http://localhost:5000/api/v1/send/poll \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "support_desk",
+    "to": "15551234567",
+    "name": "Which feature would you like next?",
+    "values": ["Faster Delivery", "Mobile App", "More Discounts"],
+    "selectableCount": 1
+  }'
+```
+
+### 5. Request 8-Digit Pairing Code
+```bash
+curl -X POST http://localhost:5000/api/v1/sessions/support_desk/pairing-code \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "phoneNumber": "15551234567"
+  }'
+```
+
+### 6. System Health & Ports
+```bash
+curl http://localhost:5000/api/v1/system/health
+```
 
 ---
 
-## 📋 Prerequisites
+## 💻 CLI Management Tool (`whatsapp-ctl`)
 
-Before you begin, ensure you have the following installed:
-
-1.  **Node.js**: v20.x or higher (Required for the latest WhatsApp libraries).
-2.  **Python**: 3.8 or higher.
-3.  **MySQL Server**: Running and accessible.
-
----
-
-## ⚙️ Installation
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/technologyinnovision-team/TI-Whatsapp-API-Gateway.git
-cd TI-Whatsapp-API-Gateway
-```
-
-### 2. Database Setup
-Create a new MySQL database for the application.
-```sql
-CREATE DATABASE whatsapp_gateway;
-```
-
-### 3. Backend Setup (Flask)
-Navigate to the `flask-app` directory and set up the Python environment.
+When installed on Linux, manage services with `whatsapp-ctl`:
 
 ```bash
-cd flask-app
-# Create virtual environment
-python -m venv venv
-# Activate (Windows)
-venv\Scripts\activate
-# Activate (Linux/Mac)
-source venv/bin/activate
+# Check service status
+whatsapp-ctl status
 
-# Install dependencies
-pip install -r requirements.txt
-```
+# View live application logs
+whatsapp-ctl logs
 
-**Configuration:**
-Create a `.env` file in the `flask-app` directory:
-```ini
-DB_USERNAME=root
-DB_PASSWORD=yourpassword
-DB_HOST=localhost
-DB_NAME=whatsapp_gateway
-SECRET_KEY=your-super-secret-key-change-this
-```
+# Restart gateway services
+whatsapp-ctl restart
 
-### 4. Bridge Setup (Node.js)
-Navigate to the `wa-bridge` directory and install Node dependencies.
+# Check active ports
+whatsapp-ctl ports
 
-```bash
-cd ../wa-bridge
-npm install
+# Stop or Start
+whatsapp-ctl stop
+whatsapp-ctl start
 ```
 
 ---
 
-## 🚀 Running the Application
+## ⚙️ Configuration (`.env`)
 
-For development, you need to run both the Bridge and the Flask app.
-
-**Terminal 1 (Bridge):**
-```bash
-cd wa-bridge
-node server.js
-# Runs on Port 3000
-```
-
-**Terminal 2 (Flask App):**
-```bash
-cd flask-app
-# Ensure venv is active
-python app.py
-# Runs on Port 5000
-```
-
-Visit `http://localhost:5000` in your browser to access the dashboard.
-
----
-
-## 📖 API Documentation
-
-The platform exposes a public API for sending messages. You can find your `X-API-Key` in the User Dashboard.
-
-### Send Message Endpoint
-
-**POST** `/api/v1/send`
-
-**Headers:**
-*   `Content-Type`: `application/json`
-*   `X-API-Key`: `your_generated_api_key_here`
-
-**Body Parameters:**
-| Parameter | Type | Description |
+| Variable | Default | Description |
 | :--- | :--- | :--- |
-| `account_id` | `string` | The **Alias** connection name you created in the dashboard. |
-| `to` | `string` or `array` | Phone number (with country code, no `+`) OR list of numbers. |
-| `message` | `string` | The text message content. |
-
-**Example Request:**
-```json
-{
-  "account_id": "marketing_1",
-  "to": "1234567890",
-  "message": "Hello! This is a test message from the Gateway."
-}
-```
-
-**Example Bulk Request:**
-```json
-{
-  "account_id": "marketing_1",
-  "to": ["1234567890", "0987654321"],
-  "message": "Weekly Newsletter Request"
-}
-```
+| `WEB_PORT` | `5000` | Port for Flask Web Gateway & Dashboard |
+| `BRIDGE_PORT` | `3001` | Port for Node.js Baileys Bridge |
+| `BRIDGE_URL` | `http://127.0.0.1:3001` | Internal URL for Bridge communication |
+| `DATABASE_URL` | `sqlite:///whatsapp_gateway.db` | SQLAlchemy connection string (SQLite, MySQL, PostgreSQL) |
+| `SECRET_KEY` | *(Generated)* | Flask session signing secret |
+| `WEBHOOK_SECRET` | *(Generated)* | HMAC secret for signing outgoing webhooks |
+| `DEFAULT_MIN_DELAY_MS` | `4000` | Minimum anti-ban delay between messages (ms) |
+| `DEFAULT_MAX_DELAY_MS` | `9000` | Maximum anti-ban delay between messages (ms) |
+| `DEFAULT_DAILY_QUOTA` | `300` | Maximum messages per account per day |
 
 ---
 
-## 📦 Production Deployment
+## 🔒 Security Best Practices
 
-For production environments (Ubuntu/Debian), we recommend using **Supervisor** to keep both services running and **Nginx** as a reverse proxy.
-
-Refer to `deployment.md` in the root directory for a detailed step-by-step guide on deploying to a VPS (like shared hosting or cloud servers).
-
-### Quick Supervisor Config Snippet
-```ini
-[program:wa-bridge]
-command=/usr/bin/node server.js
-directory=/path/to/wa-bridge
-autostart=true
-autorestart=true
-
-[program:flask-app]
-command=/path/to/venv/bin/gunicorn -w 4 -b 127.0.0.1:5000 app:app
-directory=/path/to/flask-app
-autostart=true
-autorestart=true
-```
+1. **Firewall**: Expose only the Web Dashboard port (`5000` or via Reverse Proxy `80/443`). Keep the Bridge port (`3001`) internal.
+2. **Reverse Proxy & SSL**: Deploy behind Nginx or Caddy with Let's Encrypt SSL.
+3. **Session Credentials**: The `wa-bridge/auth_info` directory contains cryptographic WhatsApp credentials and is protected in `.gitignore`. Never share or commit this folder.
 
 ---
 
-## 🔒 Security Notes
+## 📄 License & Credits
 
-*   **API Keys**: Keep your API keys secret. Anyone with a key can send messages via your connected accounts.
-*   **Session Data**: The `wa-bridge/auth_info` folder contains sensitive session credentials. Ensure this folder is secured and not publicly accessible.
-*   **Rate Limiting**: While the system handles queuing, avoid sending thousands of messages instantly to prevent WhatsApp from flagging your numbers.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please fork the repository and submit a pull request for any enhancements.
-
-## 📄 License
-
-This project is open-source and available under the [MIT License](LICENSE).
+Developed by **[Technology Innovision](https://technologyinnovision.com)**.  
+Licensed under the [MIT License](LICENSE).

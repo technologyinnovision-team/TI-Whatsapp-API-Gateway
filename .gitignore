@@ -1,2 +1,42 @@
-node_modules/
+# WhatsApp Auth Sessions & Sensitive Creds
 auth_info/
+**/auth_info/
+*.session
+
+# Secrets & Environment Configurations
+.env
+flask-app/.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+flask-app/venv/
+ENV/
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Node
+node_modules/
+wa-bridge/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Process & Log files
+*.log
+*.pid
+*.sock
+supervisord.log
+supervisord.pid
+supervisor.sock
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

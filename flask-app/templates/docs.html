@@ -110,6 +110,10 @@
                     <a href="#endpoint-legacy-send" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Universal Send (`/api/v1/send`)</a>
 
                     <div class="pt-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">Endpoints</div>
+                    <a href="#endpoint-send-buttons" class="block px-3 py-1.5 rounded-lg text-xs font-semibold text-wa-500 hover:bg-wa-500/10 transition flex items-center space-x-1.5">
+                        <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-wa-500"></i>
+                        <span>CTA Buttons & Links</span>
+                    </a>
                     <a href="#endpoint-send-text" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Send Text with Spintax</a>
                     <a href="#endpoint-send-media" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Send Media (Images/Docs)</a>
                     <a href="#endpoint-send-voice" class="block px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-dark-800 transition">Send Voice Notes (PTT)</a>
@@ -395,7 +399,228 @@ console.log(res.data);</pre>
                 </div>
             </section>
 
-            <!-- 5. Granular Endpoints: Send Media, Voice, Poll -->
+            <!-- 5. Interactive Call-To-Action (CTA) Buttons & Links -->
+            <section id="endpoint-send-buttons" class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">POST</span>
+                        <span>/api/v1/send/buttons</span>
+                    </h2>
+                    <span class="text-xs text-wa-500 font-mono font-semibold">✨ Click-To-Action (CTA) Buttons</span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-300">Send WhatsApp business-grade interactive messages with clickable buttons attached. Also supported directly via the universal <code class="text-emerald-400 bg-dark-900 px-1 py-0.5 rounded font-mono">POST /api/v1/send</code> endpoint by passing a <code class="text-white font-mono">"buttons"</code> array!</p>
+
+                <!-- Button Types Breakdown -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <div class="bg-dark-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                        <div class="font-bold text-cyan-400 flex items-center space-x-1.5">
+                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                            <span>1. Website Link Button</span>
+                        </div>
+                        <p class="text-slate-400 text-[11px]"><code class="text-white font-mono">type: "url"</code> — Opens website or product URL.</p>
+                    </div>
+
+                    <div class="bg-dark-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                        <div class="font-bold text-emerald-400 flex items-center space-x-1.5">
+                            <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+                            <span>2. Direct Call Button</span>
+                        </div>
+                        <p class="text-slate-400 text-[11px]"><code class="text-white font-mono">type: "call"</code> — Directly dials support phone number.</p>
+                    </div>
+
+                    <div class="bg-dark-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                        <div class="font-bold text-amber-400 flex items-center space-x-1.5">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span>3. Copy Code Button</span>
+                        </div>
+                        <p class="text-slate-400 text-[11px]"><code class="text-white font-mono">type: "copy"</code> — Copies promo coupon or order ID.</p>
+                    </div>
+
+                    <div class="bg-dark-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                        <div class="font-bold text-purple-400 flex items-center space-x-1.5">
+                            <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
+                            <span>4. Quick Reply Button</span>
+                        </div>
+                        <p class="text-slate-400 text-[11px]"><code class="text-white font-mono">type: "reply"</code> — Taps to send instant reply in chat.</p>
+                    </div>
+                </div>
+
+                <!-- Code Tabs Container for Buttons -->
+                <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+                    <div class="bg-dark-900 border-b border-slate-800 px-4 flex space-x-4 overflow-x-auto text-xs font-semibold">
+                        <button onclick="switchCodeTab('btn-code-php', this)" class="code-tab-btn py-3 border-b-2 border-wa-500 text-wa-500">PHP (cURL)</button>
+                        <button onclick="switchCodeTab('btn-code-wp', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">WordPress / WooCommerce</button>
+                        <button onclick="switchCodeTab('btn-code-py', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">Python</button>
+                        <button onclick="switchCodeTab('btn-code-js', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">Node.js (Axios)</button>
+                        <button onclick="switchCodeTab('btn-code-curl', this)" class="code-tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-white">cURL</button>
+                    </div>
+
+                    <!-- PHP cURL -->
+                    <div id="btn-code-php" class="code-tab-content p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">&lt;?php
+$apiKey = "YOUR_API_KEY";
+$apiUrl = "https://wpapp.tistack.online/api/v1/send/buttons"; // or /api/v1/send
+
+$payload = [
+    "account_id" => "fahadstyles",
+    "to"         => "923001234567",
+    "title"      => "Summer Collection Launch",
+    "message"    => "Hey! Our new 2026 Collection is now live. Use code FAHAD20 for 20% off!",
+    "footer"     => "Fahad Styles Official",
+    "media"      => "https://example.com/banner.jpg", // Optional image header
+    "buttons"    => [
+        [
+            "type" => "url",
+            "text" => "🛍️ Visit Store",
+            "url"  => "https://fahadstyles.com"
+        ],
+        [
+            "type"  => "call",
+            "text"  => "📞 Call Support",
+            "phone" => "+923001234567"
+        ],
+        [
+            "type" => "copy",
+            "text" => "🎟️ Copy Coupon",
+            "code" => "FAHAD20"
+        ],
+        [
+            "type" => "reply",
+            "text" => "📦 Track Order",
+            "id"   => "track_order"
+        ]
+    ]
+];
+
+$ch = curl_init($apiUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "X-API-Key: " . $apiKey
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+print_r($result);
+?&gt;</pre>
+                    </div>
+
+                    <!-- WordPress / WooCommerce -->
+                    <div id="btn-code-wp" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">&lt;?php
+// Send WhatsApp Order Notification with Clickable "Track Order" and "Contact Us" buttons
+function send_order_buttons_notification($order_id, $customer_phone) {
+    $apiKey = "YOUR_API_KEY";
+    $apiUrl = "https://wpapp.tistack.online/api/v1/send/buttons";
+
+    $response = wp_remote_post($apiUrl, [
+        'headers' => [
+            'Content-Type' => 'application/json',
+            'X-API-Key'    => $apiKey,
+        ],
+        'body'    => wp_json_encode([
+            'account_id' => 'fahadstyles',
+            'to'         => $customer_phone,
+            'title'      => 'Order #' . $order_id . ' Confirmed',
+            'message'    => 'Thank you for shopping with Fahad Styles! Your order has been processed.',
+            'footer'     => 'Fahad Styles Customer Care',
+            'buttons'    => [
+                [
+                    'type' => 'url',
+                    'text' => 'Track Your Order',
+                    'url'  => 'https://fahadstyles.com/track?order=' . $order_id
+                ],
+                [
+                    'type'  => 'call',
+                    'text'  => 'Call Helpline',
+                    'phone' => '+923001234567'
+                ]
+            ]
+        ]),
+        'timeout' => 20
+    ]);
+
+    return !is_wp_error($response);
+}
+?&gt;</pre>
+                    </div>
+
+                    <!-- Python -->
+                    <div id="btn-code-py" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">import requests
+
+url = "https://wpapp.tistack.online/api/v1/send/buttons"
+headers = {
+    "Content-Type": "application/json",
+    "X-API-Key": "YOUR_API_KEY"
+}
+payload = {
+    "account_id": "fahadstyles",
+    "to": "923001234567",
+    "title": "Fahad Styles Flash Sale!",
+    "message": "Enjoy 20% discount on all menswear for the next 24 hours.",
+    "footer": "Fahad Styles Official",
+    "buttons": [
+        {"type": "url", "text": "Visit Website", "url": "https://fahadstyles.com"},
+        {"type": "copy", "text": "Copy Coupon", "code": "FLASH20"},
+        {"type": "call", "text": "Call Support", "phone": "+923001234567"}
+    ]
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())</pre>
+                    </div>
+
+                    <!-- Node.js -->
+                    <div id="btn-code-js" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">import axios from 'axios';
+
+const res = await axios.post('https://wpapp.tistack.online/api/v1/send/buttons', {
+    account_id: 'fahadstyles',
+    to: '923001234567',
+    title: 'Order Status Update',
+    message: 'Your parcel is out for delivery with our courier partner.',
+    footer: 'Fahad Styles Logistics',
+    buttons: [
+        { type: 'url', text: 'Live Tracking', url: 'https://fahadstyles.com/track' },
+        { type: 'call', text: 'Contact Rider', phone: '+923001234567' }
+    ]
+}, {
+    headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': 'YOUR_API_KEY'
+    }
+});
+
+console.log(res.data);</pre>
+                    </div>
+
+                    <!-- cURL -->
+                    <div id="btn-code-curl" class="code-tab-content hidden p-4">
+                        <pre class="text-xs font-mono text-slate-200 overflow-x-auto">curl -X POST https://wpapp.tistack.online/api/v1/send/buttons \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "account_id": "fahadstyles",
+    "to": "923001234567",
+    "title": "Welcome to Fahad Styles",
+    "message": "Tap any button below to browse or contact our team.",
+    "footer": "Fahad Styles Support",
+    "buttons": [
+      {"type": "url", "text": "Visit Website", "url": "https://fahadstyles.com"},
+      {"type": "call", "text": "Call Support", "phone": "+923001234567"},
+      {"type": "copy", "text": "Copy Coupon", "code": "FAHAD20"}
+    ]
+  }'</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Granular Endpoints: Send Media, Voice, Poll -->
             <section id="endpoint-send-media" class="space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                     <h2 class="text-xl font-bold text-white flex items-center space-x-2">

@@ -261,6 +261,75 @@ paths:
         '200':
           description: Poll sent
 
+  /send/buttons:
+    post:
+      summary: Send Interactive CTA & Link Buttons
+      description: |
+        Sends a WhatsApp message with interactive Call-To-Action (CTA) buttons, including:
+        - Website URL Links (e.g. "Visit Website", "Track Order")
+        - Direct Call Buttons (e.g. "Call Support")
+        - One-Tap Copy Promo/Coupon Code (e.g. "Copy Code: FAHAD20")
+        - Quick Reply Options
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - to
+                - buttons
+              properties:
+                account_id:
+                  type: string
+                  example: "fahadstyles"
+                to:
+                  type: string
+                  example: "923001234567"
+                title:
+                  type: string
+                  example: "Special Offer from Fahad Styles"
+                message:
+                  type: string
+                  example: "Summer Collection is now live! Tap below to explore."
+                footer:
+                  type: string
+                  example: "Fahad Styles Official"
+                media:
+                  type: string
+                  description: Optional image banner URL
+                  example: "https://example.com/banner.jpg"
+                buttons:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [url, call, copy, reply]
+                      text:
+                        type: string
+                      url:
+                        type: string
+                      phone:
+                        type: string
+                      code:
+                        type: string
+                  example:
+                    - type: "url"
+                      text: "Visit Store"
+                      url: "https://fahadstyles.com"
+                    - type: "call"
+                      text: "Call Support"
+                      phone: "+923001234567"
+                    - type: "copy"
+                      text: "Copy Coupon"
+                      code: "FAHAD20"
+      responses:
+        '200':
+          description: Interactive button message dispatched
+
   /send/location:
     post:
       summary: Send Location

@@ -182,6 +182,7 @@
                             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Message Type</label>
                             <select id="test-type" onchange="updateTesterFields()" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-wa-500 transition">
                                 <option value="text" selected>Text (with Spintax)</option>
+                                <option value="buttons">🔘 Interactive CTA Buttons & Links</option>
                                 <option value="image">Image (URL with caption)</option>
                                 <option value="video">Video (URL with caption)</option>
                                 <option value="voice">Audio / Voice Note (PTT)</option>
@@ -202,7 +203,7 @@
 
                     <!-- Dynamic Field: Media URL -->
                     <div id="field-media" class="hidden">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Media Direct URL</label>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Media / Header Direct URL (Optional for Buttons)</label>
                         <input type="text" id="test-media-url" placeholder="https://example.com/image.png or sample.mp4" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:border-wa-500 transition">
                     </div>
 
@@ -211,6 +212,86 @@
                         <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Poll Question & Options</label>
                         <input type="text" id="test-poll-name" placeholder="Poll Question: What feature do you like most?" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition mb-2">
                         <input type="text" id="test-poll-options" placeholder="Comma-separated options: Anti-Ban, One-line Install, Speed" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                    </div>
+
+                    <!-- Dynamic Field: Interactive CTA Buttons Builder -->
+                    <div id="field-buttons" class="hidden space-y-3 p-4 rounded-xl bg-dark-900/80 border border-slate-800">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-wa-400"></i>
+                                <span>Interactive CTA Buttons</span>
+                            </label>
+                            <span class="text-[11px] text-wa-400 font-mono">Website Links, Calls, Coupon Codes</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Card Header Title (Optional)</label>
+                                <input type="text" id="test-btn-title" placeholder="e.g. 🔥 Special Offer Just For You!" class="w-full bg-dark-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Footer Text (Optional)</label>
+                                <input type="text" id="test-btn-footer" placeholder="e.g. Powered by WhatsApp Business Gateway" class="w-full bg-dark-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                            </div>
+                        </div>
+
+                        <!-- Button 1 -->
+                        <div class="p-3 rounded-xl bg-dark-950 border border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-wa-400"></i> Button 1 (Website / URL)
+                                </span>
+                                <select id="test-btn1-type" class="bg-dark-900 border border-slate-700 text-[11px] text-slate-300 rounded px-2 py-0.5">
+                                    <option value="cta_url" selected>URL Link (Website)</option>
+                                    <option value="cta_call">Phone Call</option>
+                                    <option value="cta_copy">Copy Coupon Code</option>
+                                    <option value="quick_reply">Quick Reply</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="test-btn1-text" value="Visit Online Store" placeholder="Button Label" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
+                                <input type="text" id="test-btn1-val" value="https://fahadstyles.com" placeholder="URL or Value" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
+                            </div>
+                        </div>
+
+                        <!-- Button 2 -->
+                        <div class="p-3 rounded-xl bg-dark-950 border border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                    <i data-lucide="phone-call" class="w-3.5 h-3.5 text-blue-400"></i> Button 2 (Call Support)
+                                </span>
+                                <select id="test-btn2-type" class="bg-dark-900 border border-slate-700 text-[11px] text-slate-300 rounded px-2 py-0.5">
+                                    <option value="cta_call" selected>Phone Call</option>
+                                    <option value="cta_url">URL Link (Website)</option>
+                                    <option value="cta_copy">Copy Coupon Code</option>
+                                    <option value="quick_reply">Quick Reply</option>
+                                    <option value="none">Disabled (No 2nd Button)</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="test-btn2-text" value="Call Support" placeholder="Button Label" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
+                                <input type="text" id="test-btn2-val" value="+923001234567" placeholder="Phone Number with Country Code" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
+                            </div>
+                        </div>
+
+                        <!-- Button 3 -->
+                        <div class="p-3 rounded-xl bg-dark-950 border border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5 text-purple-400"></i> Button 3 (Copy Promo Code)
+                                </span>
+                                <select id="test-btn3-type" class="bg-dark-900 border border-slate-700 text-[11px] text-slate-300 rounded px-2 py-0.5">
+                                    <option value="cta_copy" selected>Copy Coupon Code</option>
+                                    <option value="cta_url">URL Link (Website)</option>
+                                    <option value="cta_call">Phone Call</option>
+                                    <option value="quick_reply">Quick Reply</option>
+                                    <option value="none">Disabled (No 3rd Button)</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="test-btn3-text" value="Copy 50% Off Code" placeholder="Button Label" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
+                                <input type="text" id="test-btn3-val" value="EID50OFF" placeholder="Promo Code to Copy" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
+                            </div>
+                        </div>
                     </div>
 
                     <button type="submit" id="btn-send-test" class="inline-flex items-center space-x-2 bg-wa-500 hover:bg-wa-600 text-dark-900 font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-wa-500/20 transition text-sm">
@@ -325,19 +406,29 @@
         const fieldText = document.getElementById('field-text');
         const fieldMedia = document.getElementById('field-media');
         const fieldPoll = document.getElementById('field-poll');
+        const fieldButtons = document.getElementById('field-buttons');
 
         if (type === 'text') {
             fieldText.classList.remove('hidden');
             fieldMedia.classList.add('hidden');
             fieldPoll.classList.add('hidden');
+            if (fieldButtons) fieldButtons.classList.add('hidden');
+        } else if (type === 'buttons') {
+            fieldText.classList.remove('hidden');
+            fieldMedia.classList.remove('hidden');
+            fieldPoll.classList.add('hidden');
+            if (fieldButtons) fieldButtons.classList.remove('hidden');
+            lucide.createIcons();
         } else if (['image', 'video', 'voice', 'document'].includes(type)) {
             fieldText.classList.remove('hidden');
             fieldMedia.classList.remove('hidden');
             fieldPoll.classList.add('hidden');
+            if (fieldButtons) fieldButtons.classList.add('hidden');
         } else if (type === 'poll') {
             fieldText.classList.add('hidden');
             fieldMedia.classList.add('hidden');
             fieldPoll.classList.remove('hidden');
+            if (fieldButtons) fieldButtons.classList.add('hidden');
         }
     }
 
@@ -436,6 +527,28 @@
         if (type === 'text') {
             payload.message = text;
             endpoint = '/api/v1/send/text';
+        } else if (type === 'buttons') {
+            payload.message = text;
+            payload.title = document.getElementById('test-btn-title').value;
+            payload.footer = document.getElementById('test-btn-footer').value;
+            if (media) payload.media = media;
+
+            const btns = [];
+            for (let i = 1; i <= 3; i++) {
+                const bType = document.getElementById(`test-btn${i}-type`).value;
+                const bText = document.getElementById(`test-btn${i}-text`).value;
+                const bVal = document.getElementById(`test-btn${i}-val`).value;
+                if (bType && bType !== 'none' && bText) {
+                    let bObj = { type: bType, text: bText };
+                    if (bType === 'cta_url') bObj.url = bVal;
+                    else if (bType === 'cta_call') bObj.phone = bVal;
+                    else if (bType === 'cta_copy') bObj.code = bVal;
+                    else bObj.id = bVal;
+                    btns.push(bObj);
+                }
+            }
+            payload.buttons = btns;
+            endpoint = '/api/v1/send/buttons';
         } else if (['image', 'video', 'document'].includes(type)) {
             payload.type = type;
             payload.media = media;

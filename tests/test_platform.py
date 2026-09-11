@@ -125,6 +125,57 @@ class WhatsAppPlatformTestCase(unittest.TestCase):
         self.assertEqual(len(data['details']), 1)
         self.assertEqual(data['details'][0]['to'], '923001234567')
 
+    def test_buttons_endpoint_validation_and_dispatch(self):
+        # 1. Missing fields check
+        resp = self.app.post('/api/v1/send/buttons',
+            headers={'X-API-Key': self.test_api_key},
+            json={'account_id': 'fahadstyles'}
+        )
+        self.assertEqual(resp.status_code, 400)
+        data = json.loads(resp.data)
+        self.assertIn('Missing required fields', data.get('error', ''))
+
+        # 2. Account not found
+        resp = self.app.post('/api/v1/send/buttons',
+            headers={'X-API-Key': self.test_api_key},
+            json={
+                'account_id': 'missing_acc',
+                'to': '923001234567',
+                'message': 'Hello',
+                'buttons': [{'type': 'cta_url', 'text': 'Visit', 'url': 'https://fahadstyles.com'}]
+            }
+        )
+        self.assertEqual(resp.status_code, 404)
+
+        # 3. Create account and dispatch buttons
+        with app.app_context():
+            acc = WhatsappAccount(
+                user_id=self.test_user_id,
+                alias='fahadstyles_buttons',
+                session_id='buttons-session-uuid',
+                mode='standard'
+            )
+            db.session.add(acc)
+            db.session.commit()
+
+        resp = self.app.post('/api/v1/send/buttons',
+            headers={'X-API-Key': self.test_api_key},
+            json={
+                'account_id': 'fahadstyles_buttons',
+                'to': '923001234567',
+                'title': 'Fahad Styles Flash Sale',
+                'message': 'Enjoy 50% discount on all new summer arrivals!',
+                'footer': 'Official Store Notification',
+                'buttons': [
+                    {'type': 'cta_url', 'text': 'Shop Now', 'url': 'https://fahadstyles.com/sale'},
+                    {'type': 'cta_call', 'text': 'Call Helpline', 'phone': '+923001234567'},
+                    {'type': 'cta_copy', 'text': 'Copy Code', 'code': 'SALE50'}
+                ]
+            }
+        )
+        # Verify call completes without 500 server crash (bridge may be offline in unit test)
+        self.assertIn(resp.status_code, [200, 502])
+
     def test_swagger_and_openapi_docs(self):
         resp_docs = self.app.get('/docs')
         self.assertEqual(resp_docs.status_code, 200)

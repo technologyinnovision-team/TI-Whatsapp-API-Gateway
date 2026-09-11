@@ -847,6 +847,54 @@ def api_send_poll():
 
     return jsonify(res)
 
+@app.route('/api/v1/send/buttons', methods=['POST'])
+def api_send_buttons():
+    user = get_user_from_api_key()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json or {}
+    account_alias = data.get('account_id') or data.get('account')
+    to = data.get('to')
+    message = data.get('message') or data.get('text') or ''
+    title = data.get('title', '')
+    footer = data.get('footer', '')
+    media = data.get('media') or data.get('url') or data.get('image')
+    buttons = data.get('buttons', [])
+
+    if not account_alias or not to or (not message and not title) or not buttons:
+        return jsonify({'error': 'Missing required fields: account_id, to, message/title, buttons'}), 400
+
+    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=str(account_alias).strip()).first()
+    if not account:
+        return jsonify({'error': f"Account '{account_alias}' not found"}), 404
+
+    res = proxy_bridge('POST', f'/session/{account.session_id}/send', {
+        'to': to,
+        'type': 'buttons',
+        'text': message,
+        'title': title,
+        'footer': footer,
+        'media': media,
+        'buttons': buttons
+    })
+
+    status = 'sent' if res and res.get('success') else 'failed'
+    log = MessageLog(
+        user_id=user.id,
+        account_id=account.id,
+        recipient=to,
+        message_type='buttons',
+        content_preview=(message or title)[:100] + f" [{len(buttons)} CTA Buttons]",
+        status=status,
+        message_id=res.get('messageId') if res else None,
+        error_message=res.get('error') if res else None
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    return jsonify(res)
+
 @app.route('/api/v1/send/location', methods=['POST'])
 def api_send_location():
     user = get_user_from_api_key()
@@ -915,11 +963,21 @@ def api_send_legacy():
     to = data.get('to')
     message = data.get('message') or data.get('text') or ''
     media = data.get('media') or data.get('url')
-    msg_type = data.get('type', 'text' if not media else 'image')
+    buttons = data.get('buttons')
+    msg_type = data.get('type')
+    if not msg_type:
+        if buttons:
+            msg_type = 'buttons'
+        elif media:
+            msg_type = 'image'
+        else:
+            msg_type = 'text'
     caption = data.get('caption', message)
     file_name = data.get('fileName') or data.get('filename') or 'file.pdf'
+    title = data.get('title', '')
+    footer = data.get('footer', '')
 
-    if not account_alias or not to or (not message and not media):
+    if not account_alias or not to or (not message and not media and not title):
         return jsonify({"error": "Missing params. Required: account_id, to, message"}), 400
 
     clean_alias = str(account_alias).strip()
@@ -975,6 +1033,10 @@ def api_send_legacy():
                 payload['media'] = media
                 payload['caption'] = caption
                 payload['fileName'] = file_name
+            if buttons:
+                payload['buttons'] = buttons
+                payload['title'] = title
+                payload['footer'] = footer
 
             bridge_res = proxy_bridge('POST', f'/session/{account.session_id}/send', payload, timeout=25)
 

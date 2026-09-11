@@ -1,6 +1,7 @@
 import axios from 'axios';
 import mime from 'mime-types';
 import fs from 'fs';
+import { generateWAMessageFromContent, prepareWAMessageMedia } from '@whiskeysockets/baileys';
 
 /**
  * Resolves media input (URL, base64 data string, or local path) into a Buffer and metadata.
@@ -168,3 +169,99 @@ export async function buildMessagePayload(type, options) {
             throw new Error(`Unsupported message type: ${type}`);
     }
 }
+
+/**
+ * Builds a WhatsApp Native Flow Interactive Message with Click-To-Action (CTA) Buttons.
+ * Supports:
+ * - cta_url: Website links (e.g. "Visit Website", "View Product")
+ * - cta_call: Direct phone call buttons
+ * - cta_copy: One-tap copy coupon/promo codes
+ * - quick_reply: Interactive quick replies
+ */
+export async function buildInteractiveButtonsMessage(socket, targetJid, options = {}) {
+    const rawButtons = options.buttons || [];
+    const formattedButtons = rawButtons.map((btn, idx) => {
+        if (typeof btn === 'string') {
+            return {
+                name: 'quick_reply',
+                buttonParamsJson: JSON.stringify({ display_text: btn, id: 'btn_' + idx })
+            };
+        }
+        const bType = (btn.type || '').toLowerCase();
+        // 1. URL / Website Link Button
+        if (bType === 'url' || btn.url) {
+            return {
+                name: 'cta_url',
+                buttonParamsJson: JSON.stringify({
+                    display_text: btn.text || btn.displayText || 'Visit Website',
+                    url: btn.url,
+                    merchant_url: btn.url
+                })
+            };
+        }
+        // 2. Call Phone Number Button
+        if (bType === 'call' || btn.phone || btn.phoneNumber) {
+            return {
+                name: 'cta_call',
+                buttonParamsJson: JSON.stringify({
+                    display_text: btn.text || btn.displayText || 'Call Us',
+                    phone_number: btn.phone || btn.phoneNumber
+                })
+            };
+        }
+        // 3. Copy Code Button
+        if (bType === 'copy' || btn.code || btn.copy_code) {
+            return {
+                name: 'cta_copy',
+                buttonParamsJson: JSON.stringify({
+                    display_text: btn.text || btn.displayText || 'Copy Code',
+                    id: btn.id || 'copy_' + idx,
+                    copy_code: btn.code || btn.copy_code
+                })
+            };
+        }
+        // 4. Quick Reply Button
+        return {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+                display_text: btn.text || btn.displayText || 'Option',
+                id: btn.id || 'btn_' + idx
+            })
+        };
+    });
+
+    let header = { title: options.title || '', hasMediaAttachment: false };
+    if (options.media || options.image) {
+        try {
+            const { buffer } = await resolveMediaBuffer(options.media || options.image, 'image/jpeg');
+            const media = await prepareWAMessageMedia({ image: buffer }, { upload: socket.waUploadToServer });
+            header = {
+                title: options.title || '',
+                hasMediaAttachment: true,
+                imageMessage: media.imageMessage
+            };
+        } catch (e) {
+            console.error('Failed to attach media to button header:', e.message);
+        }
+    }
+
+    const interactiveMessage = {
+        body: { text: options.text || options.message || '' },
+        footer: { text: options.footer || '' },
+        header: header,
+        nativeFlowMessage: { buttons: formattedButtons }
+    };
+
+    const messageContent = {
+        viewOnceMessage: {
+            message: {
+                interactiveMessage
+            }
+        }
+    };
+
+    return generateWAMessageFromContent(targetJid, messageContent, {
+        userJid: socket.user?.id
+    });
+}
+

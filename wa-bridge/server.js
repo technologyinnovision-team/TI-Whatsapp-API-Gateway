@@ -17,7 +17,7 @@ import {
 } from '@whiskeysockets/baileys';
 
 import { resolveSpintax, calculateTypingDelay, calculateIntervalDelay, SessionSafetyTracker } from './lib/anti-ban.js';
-import { buildMessagePayload } from './lib/media.js';
+import { buildMessagePayload, buildInteractiveButtonsMessage } from './lib/media.js';
 import { dispatchWebhook, getRecentWebhookLogs } from './lib/webhook.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
@@ -399,8 +399,15 @@ async function processQueue(sessionId) {
             await socket.sendPresenceUpdate('paused', targetJid);
 
             // 7. Dispatch Message Payload
-            const payload = await buildMessagePayload(item.type, item.options);
-            const sent = await socket.sendMessage(targetJid, payload);
+            let sent;
+            if (item.type === 'buttons' || (item.options?.buttons && Array.isArray(item.options.buttons) && item.options.buttons.length > 0)) {
+                const msg = await buildInteractiveButtonsMessage(socket, targetJid, item.options);
+                await socket.relayMessage(targetJid, msg.message, { messageId: msg.key.id });
+                sent = msg;
+            } else {
+                const payload = await buildMessagePayload(item.type, item.options);
+                sent = await socket.sendMessage(targetJid, payload);
+            }
 
             // 8. Record Safety Stats
             session.safety.recordSent();

@@ -34,7 +34,17 @@
                         {% endif %}
                     </span>
                 </div>
-                <p class="text-xs text-slate-400 font-mono mt-1" id="header-phone">Phone: {{ account.phone_number or 'Not yet authenticated' }}</p>
+                <div class="flex items-center space-x-2 mt-1">
+                    <p class="text-xs text-slate-400 font-mono" id="header-phone">Phone: {{ account.phone_number or 'Not yet authenticated' }}</p>
+                    <span class="text-slate-600">•</span>
+                    <div class="flex items-center space-x-1.5 bg-dark-900/90 px-2 py-0.5 rounded-lg border border-slate-700/70">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Account ID:</span>
+                        <code class="text-xs font-mono font-bold text-wa-400 select-all">{{ account.alias }}</code>
+                        <button type="button" onclick="navigator.clipboard.writeText('{{ account.alias }}'); alert('Account ID copied: {{ account.alias }}');" title="Copy Account ID for API" class="text-slate-400 hover:text-white p-0.5 rounded transition">
+                            <i data-lucide="copy" class="w-3 h-3"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -170,6 +180,16 @@
                     <i data-lucide="message-square-plus" class="w-5 h-5 text-wa-500"></i>
                     <span>Interactive Message Composer</span>
                 </h3>
+                <div class="mb-4 p-3 bg-dark-900/80 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-slate-400">Target Account ID for API:</span>
+                        <code class="text-xs font-mono font-bold text-wa-400 bg-dark-950 px-2 py-1 rounded border border-slate-800">{{ account.alias }}</code>
+                    </div>
+                    <button type="button" onclick="navigator.clipboard.writeText('{{ account.alias }}'); alert('Account ID copied: {{ account.alias }}');" class="inline-flex items-center space-x-1 bg-dark-800 hover:bg-dark-700 text-wa-400 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700 transition font-medium">
+                        <i data-lucide="copy" class="w-3 h-3"></i>
+                        <span>Copy ID</span>
+                    </button>
+                </div>
 
                 <form id="tester-form" onsubmit="sendTestMessage(event)" class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -181,37 +201,39 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Message Type</label>
                             <select id="test-type" onchange="updateTesterFields()" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-wa-500 transition">
-                                <option value="text" selected>Text (with Spintax)</option>
+                                <option value="text">💬 Standard Text (Spintax Supported)</option>
                                 <option value="buttons">🔘 Interactive CTA Buttons & Links</option>
-                                <option value="image">Image (URL with caption)</option>
-                                <option value="video">Video (URL with caption)</option>
-                                <option value="voice">Audio / Voice Note (PTT)</option>
-                                <option value="document">Document (PDF/File URL)</option>
-                                <option value="poll">WhatsApp Poll</option>
+                                <option value="image">🖼️ Image (URL or Local File)</option>
+                                <option value="video">🎥 Video (MP4)</option>
+                                <option value="voice">🎙️ Push-to-Talk Voice Note (PTT)</option>
+                                <option value="document">📄 Document (PDF / Office / ZIP)</option>
+                                <option value="poll">📊 Interactive WhatsApp Poll</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Dynamic Field: Text / Caption -->
+                    <!-- Dynamic Field: Message Text / Spintax -->
                     <div id="field-text">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Message Text (Spintax Supported)</label>
-                            <span class="text-[11px] text-emerald-400 font-mono">{Hello|Hi|Greetings} supported</span>
-                        </div>
-                        <textarea id="test-message" rows="4" placeholder="{Hello|Hi} friend! This is a test message from my self-hosted WhatsApp Gateway." class="w-full bg-dark-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition"></textarea>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Message Body</label>
+                        <textarea id="test-message" rows="3" placeholder="Type message... Try Spintax: {Hello|Hi|Hey} customer! Do you want to confirm your order?" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition font-sans">{Hello|Hi|Greetings}! Would you like to confirm your order today?</textarea>
                     </div>
 
                     <!-- Dynamic Field: Media URL -->
                     <div id="field-media" class="hidden">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Media / Header Direct URL (Optional for Buttons)</label>
-                        <input type="text" id="test-media-url" placeholder="https://example.com/image.png or sample.mp4" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:border-wa-500 transition">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Direct Media URL</label>
+                        <input type="text" id="test-media" placeholder="https://example.com/file.jpg or base64" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:border-wa-500 transition">
                     </div>
 
-                    <!-- Dynamic Field: Poll Options -->
-                    <div id="field-poll" class="hidden space-y-2">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Poll Question & Options</label>
-                        <input type="text" id="test-poll-name" placeholder="Poll Question: What feature do you like most?" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition mb-2">
-                        <input type="text" id="test-poll-options" placeholder="Comma-separated options: Anti-Ban, One-line Install, Speed" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                    <!-- Dynamic Field: Poll Details -->
+                    <div id="field-poll" class="hidden space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Poll Question</label>
+                            <input type="text" id="test-poll-name" placeholder="How satisfied are you with our service?" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Options (Comma separated)</label>
+                            <input type="text" id="test-poll-opts" placeholder="⭐⭐⭐⭐⭐ Excellent, ⭐⭐⭐⭐ Good, ⭐⭐ Average" class="w-full bg-dark-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-wa-500 transition">
+                        </div>
                     </div>
 
                     <!-- Dynamic Field: Interactive CTA Buttons Builder -->
@@ -221,7 +243,7 @@
                                 <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-wa-400"></i>
                                 <span>Interactive CTA Buttons</span>
                             </label>
-                            <span class="text-[11px] text-wa-400 font-mono">Website Links, Calls, Coupon Codes</span>
+                            <span class="text-[11px] text-wa-400 font-mono">Quick Replies, URLs, Calls, Coupons</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
@@ -238,18 +260,18 @@
                         <div class="p-3 rounded-xl bg-dark-950 border border-slate-800 space-y-2">
                             <div class="flex items-center justify-between">
                                 <span id="test-btn1-lbl" class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-wa-400"></i> Button 1 (Website / URL)
+                                    <i data-lucide="message-square-reply" class="w-3.5 h-3.5 text-emerald-400"></i> Button 1 (Quick Reply with Auto-Response)
                                 </span>
                                 <select id="test-btn1-type" onchange="updateBtnInput(1)" class="bg-dark-900 border border-slate-700 text-[11px] text-slate-300 rounded px-2 py-0.5">
-                                    <option value="cta_url" selected>URL Link (Website)</option>
+                                    <option value="quick_reply" selected>Quick Reply (Auto-Replies on Click)</option>
+                                    <option value="cta_url">URL Link (Website)</option>
                                     <option value="cta_call">Phone Call</option>
                                     <option value="cta_copy">Copy Coupon Code</option>
-                                    <option value="quick_reply">Quick Reply (Auto-Replies on Click)</option>
                                 </select>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <input type="text" id="test-btn1-text" value="Visit Online Store" placeholder="Button Label (e.g. Yes / Track Order)" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
-                                <input type="text" id="test-btn1-val" value="https://fahadstyles.com" placeholder="URL or Auto-Reply Message" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
+                                <input type="text" id="test-btn1-text" value="Yes" placeholder="Button Label (e.g. Yes / Track Order)" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
+                                <input type="text" id="test-btn1-val" value="Thank you! Your order has been confirmed." placeholder="Auto-Reply Message on click" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
                             </div>
                         </div>
 
@@ -257,19 +279,19 @@
                         <div class="p-3 rounded-xl bg-dark-950 border border-slate-800 space-y-2">
                             <div class="flex items-center justify-between">
                                 <span id="test-btn2-lbl" class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                                    <i data-lucide="phone-call" class="w-3.5 h-3.5 text-blue-400"></i> Button 2 (Call Support)
+                                    <i data-lucide="message-square-reply" class="w-3.5 h-3.5 text-emerald-400"></i> Button 2 (Quick Reply with Auto-Response)
                                 </span>
                                 <select id="test-btn2-type" onchange="updateBtnInput(2)" class="bg-dark-900 border border-slate-700 text-[11px] text-slate-300 rounded px-2 py-0.5">
-                                    <option value="cta_call" selected>Phone Call</option>
+                                    <option value="quick_reply" selected>Quick Reply (Auto-Replies on Click)</option>
                                     <option value="cta_url">URL Link (Website)</option>
+                                    <option value="cta_call">Phone Call</option>
                                     <option value="cta_copy">Copy Coupon Code</option>
-                                    <option value="quick_reply">Quick Reply (Auto-Replies on Click)</option>
                                     <option value="none">Disabled (No 2nd Button)</option>
                                 </select>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <input type="text" id="test-btn2-text" value="Call Support" placeholder="Button Label (e.g. No / Cancel)" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
-                                <input type="text" id="test-btn2-val" value="+923001234567" placeholder="Phone Number with Country Code" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
+                                <input type="text" id="test-btn2-text" value="No" placeholder="Button Label (e.g. No / Cancel)" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
+                                <input type="text" id="test-btn2-val" value="Understood, your request has been cancelled." placeholder="Auto-Reply Message on click" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
                             </div>
                         </div>
 
@@ -277,19 +299,19 @@
                         <div class="p-3 rounded-xl bg-dark-950 border border-slate-800 space-y-2">
                             <div class="flex items-center justify-between">
                                 <span id="test-btn3-lbl" class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                                    <i data-lucide="copy" class="w-3.5 h-3.5 text-purple-400"></i> Button 3 (Copy Promo Code)
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-wa-400"></i> Button 3 (Website / URL)
                                 </span>
                                 <select id="test-btn3-type" onchange="updateBtnInput(3)" class="bg-dark-900 border border-slate-700 text-[11px] text-slate-300 rounded px-2 py-0.5">
-                                    <option value="cta_copy" selected>Copy Coupon Code</option>
-                                    <option value="cta_url">URL Link (Website)</option>
+                                    <option value="cta_url" selected>URL Link (Website)</option>
                                     <option value="cta_call">Phone Call</option>
+                                    <option value="cta_copy">Copy Coupon Code</option>
                                     <option value="quick_reply">Quick Reply (Auto-Replies on Click)</option>
                                     <option value="none">Disabled (No 3rd Button)</option>
                                 </select>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <input type="text" id="test-btn3-text" value="Copy 50% Off Code" placeholder="Button Label" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
-                                <input type="text" id="test-btn3-val" value="EID50OFF" placeholder="Promo Code to Copy" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
+                                <input type="text" id="test-btn3-text" value="Visit Store" placeholder="Button Label" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500">
+                                <input type="text" id="test-btn3-val" value="https://fahadstyles.com" placeholder="URL Link" class="bg-dark-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono placeholder-slate-500">
                             </div>
                         </div>
 
@@ -444,20 +466,34 @@
     function updateBtnInput(num) {
         const typeEl = document.getElementById(`test-btn${num}-type`);
         const valEl = document.getElementById(`test-btn${num}-val`);
+        const textEl = document.getElementById(`test-btn${num}-text`);
         const lblEl = document.getElementById(`test-btn${num}-lbl`);
         if (!typeEl || !valEl) return;
         const val = typeEl.value;
         if (val === 'cta_url') {
             valEl.placeholder = 'https://fahadstyles.com';
+            if (!valEl.value || !valEl.value.startsWith('http')) {
+                valEl.value = 'https://fahadstyles.com';
+            }
             if (lblEl) lblEl.innerHTML = `<i data-lucide="external-link" class="w-3.5 h-3.5 text-wa-400"></i> Button ${num} (Website / URL)`;
         } else if (val === 'cta_call') {
             valEl.placeholder = '+923001234567';
+            if (!valEl.value || !valEl.value.startsWith('+')) {
+                valEl.value = '+923001234567';
+            }
             if (lblEl) lblEl.innerHTML = `<i data-lucide="phone-call" class="w-3.5 h-3.5 text-blue-400"></i> Button ${num} (Phone Call)`;
         } else if (val === 'cta_copy') {
             valEl.placeholder = 'Promo Code to Copy (e.g. EID50OFF)';
+            if (!valEl.value || valEl.value.startsWith('http') || valEl.value.startsWith('+')) {
+                valEl.value = 'EID50OFF';
+            }
             if (lblEl) lblEl.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5 text-purple-400"></i> Button ${num} (Copy Coupon Code)`;
         } else if (val === 'quick_reply') {
-            valEl.placeholder = 'Auto-Reply Message on click (e.g. Ok Order confirmed)';
+            valEl.placeholder = 'Auto-Reply Message on click (e.g. Thank you! Confirmed.)';
+            if (!valEl.value || valEl.value.startsWith('http') || valEl.value.startsWith('+')) {
+                const bText = textEl ? textEl.value : '';
+                valEl.value = bText ? `Thank you! Your response '${bText}' has been recorded.` : 'Thank you! Your response has been recorded.';
+            }
             if (lblEl) lblEl.innerHTML = `<i data-lucide="message-square-reply" class="w-3.5 h-3.5 text-emerald-400"></i> Button ${num} (Quick Reply with Auto-Response)`;
         } else if (val === 'none') {
             if (lblEl) lblEl.innerHTML = `<i data-lucide="slash" class="w-3.5 h-3.5 text-slate-500"></i> Button ${num} (Disabled)`;

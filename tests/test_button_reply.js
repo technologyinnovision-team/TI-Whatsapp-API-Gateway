@@ -5,7 +5,8 @@ import {
     saveButtonReplies,
     registerButtonReply,
     findButtonReply,
-    extractIncomingMessageData
+    extractIncomingMessageData,
+    getOriginalRecipientFromMessage
 } from '../wa-bridge/lib/button-replies.js';
 
 console.log('Testing Button Replies Engine...');
@@ -105,6 +106,13 @@ const reloaded = loadButtonReplies(testDir, 'test-session');
 const reloadedMatch = findButtonReply(reloaded, 'msg_test_1001', '923001234567@s.whatsapp.net', ['Yes']);
 console.log('Reloaded Match from disk:', reloadedMatch);
 if (reloadedMatch !== 'Ok Order confirmed') throw new Error('Failed to load button replies from disk');
+
+// 9. Test Original Recipient Resolution (for Privacy LID @lid matching)
+const origRecipient = getOriginalRecipientFromMessage(buttonReplies, 'msg_test_1001');
+console.log('Original Recipient:', origRecipient);
+if (origRecipient !== '923001234567@s.whatsapp.net') {
+    throw new Error(`Expected "923001234567@s.whatsapp.net", got "${origRecipient}"`);
+}
 
 // Clean up
 fs.rmSync(testDir, { recursive: true, force: true });

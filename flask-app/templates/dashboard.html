@@ -96,6 +96,13 @@
                         <div>
                             <h3 class="font-bold text-white text-base leading-tight">{{ acc.alias }}</h3>
                             <p class="text-xs text-slate-400 font-mono mt-0.5">{{ item.phone }}</p>
+                            <div class="flex items-center space-x-1.5 mt-2 bg-dark-900/90 px-2 py-1 rounded-lg border border-slate-700/80 w-fit">
+                                <span class="text-[10px] uppercase font-bold text-slate-400">Account ID:</span>
+                                <code class="text-xs font-mono font-bold text-wa-400">{{ acc.alias }}</code>
+                                <button type="button" onclick="navigator.clipboard.writeText('{{ acc.alias }}'); alert('Account ID copied: {{ acc.alias }}');" title="Copy Account ID for API" class="text-slate-400 hover:text-white p-0.5 rounded transition">
+                                    <i data-lucide="copy" class="w-3 h-3"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 

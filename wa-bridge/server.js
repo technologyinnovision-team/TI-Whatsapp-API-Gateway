@@ -19,7 +19,7 @@ import {
 import { resolveSpintax, calculateTypingDelay, calculateIntervalDelay, SessionSafetyTracker } from './lib/anti-ban.js';
 import { buildMessagePayload, buildInteractiveButtonsMessage, getInteractiveAdditionalNodes } from './lib/media.js';
 import { dispatchWebhook, getRecentWebhookLogs } from './lib/webhook.js';
-import { loadButtonReplies, saveButtonReplies, registerButtonReply, findButtonReply, extractIncomingMessageData } from './lib/button-replies.js';
+import { loadButtonReplies, saveButtonReplies, registerButtonReply, findButtonReply, extractIncomingMessageData, getOriginalRecipientFromMessage } from './lib/button-replies.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config(); // local fallback
@@ -83,6 +83,31 @@ function saveSessionSettings(sessionId, settings) {
     fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify(settings, null, 2));
 }
 
+function loadLidMap(baseDir, sessionId) {
+    const file = path.join(baseDir, sessionId, 'lid_map.json');
+    const map = new Map();
+    try {
+        if (fs.existsSync(file)) {
+            const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+            for (const [k, v] of Object.entries(data)) {
+                map.set(k, v);
+            }
+        }
+    } catch (e) {}
+    return map;
+}
+
+function saveLidMap(baseDir, sessionId, lidMap) {
+    if (!lidMap) return;
+    const dir = path.join(baseDir, sessionId);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'lid_map.json');
+    try {
+        const obj = Object.fromEntries(lidMap.entries());
+        fs.writeFileSync(file, JSON.stringify(obj, null, 2));
+    } catch (e) {}
+}
+
 function createProxyAgent(proxyUrl) {
     if (!proxyUrl) return undefined;
     try {
@@ -132,7 +157,9 @@ async function startSession(sessionId, options = {}) {
         autoOfflineTimer: null,
         chats: new Map(),
         contacts: new Map(),
-        buttonReplies: loadButtonReplies(BASE_AUTH_DIR, sessionId)
+        buttonReplies: loadButtonReplies(BASE_AUTH_DIR, sessionId),
+        messageRecipients: new Map(),
+        lidMap: loadLidMap(BASE_AUTH_DIR, sessionId)
     };
     sessions.set(sessionId, sessionState);
 
@@ -248,24 +275,82 @@ async function startSession(sessionId, options = {}) {
         }
     });
 
+    // Synchronize contacts and linked device privacy LIDs (LID <-> Phone JID)
+    sock.ev.on('chats.phoneNumberShare', ({ lid, jid }) => {
+        if (lid && jid) {
+            sessionState.lidMap.set(lid, jid);
+            sessionState.lidMap.set(jid, lid);
+            saveLidMap(BASE_AUTH_DIR, sessionId, sessionState.lidMap);
+            console.log(`[${sessionId}] LID mapped from phoneNumberShare: ${lid} <-> ${jid}`);
+        }
+    });
+
+    sock.ev.on('contacts.upsert', (contacts) => {
+        let updated = false;
+        for (const c of contacts || []) {
+            if (c.id && c.lid) {
+                sessionState.lidMap.set(c.lid, c.id);
+                sessionState.lidMap.set(c.id, c.lid);
+                updated = true;
+            }
+        }
+        if (updated) {
+            saveLidMap(BASE_AUTH_DIR, sessionId, sessionState.lidMap);
+        }
+    });
+
+    sock.ev.on('contacts.update', (contacts) => {
+        let updated = false;
+        for (const c of contacts || []) {
+            if (c.id && c.lid) {
+                sessionState.lidMap.set(c.lid, c.id);
+                sessionState.lidMap.set(c.id, c.lid);
+                updated = true;
+            }
+        }
+        if (updated) {
+            saveLidMap(BASE_AUTH_DIR, sessionId, sessionState.lidMap);
+        }
+    });
+
     // Handle Incoming Messages
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
-        if (type !== 'notify') return;
+        if (type !== 'notify' && type !== 'append') return;
 
         for (const msg of messages) {
             if (msg.key.fromMe) continue; // ignore outgoing
 
             const sender = msg.key.remoteJid;
             const isGroup = sender.endsWith('@g.us');
-            const senderPhone = sender.replace('@s.whatsapp.net', '').replace('@g.us', '');
             const pushName = msg.pushName || '';
 
             const { body, messageType, buttonId, buttonText, quotedMessageId } = extractIncomingMessageData(msg);
 
+            // Resolve the true recipient phone JID (especially if sender is a WhatsApp Privacy LID @lid)
+            let resolvedSender = sender;
+            if (quotedMessageId) {
+                const originalTarget = sessionState.messageRecipients?.get(quotedMessageId) ||
+                                       getOriginalRecipientFromMessage(sessionState.buttonReplies, quotedMessageId);
+                if (originalTarget) {
+                    resolvedSender = originalTarget;
+                    if (sender.endsWith('@lid')) {
+                        sessionState.lidMap.set(sender, originalTarget);
+                        sessionState.lidMap.set(originalTarget, sender);
+                        saveLidMap(BASE_AUTH_DIR, sessionId, sessionState.lidMap);
+                        console.log(`[${sessionId}] Learned and saved LID mapping from quote: ${sender} -> ${originalTarget}`);
+                    }
+                }
+            } else if (sender.endsWith('@lid') && sessionState.lidMap.has(sender)) {
+                resolvedSender = sessionState.lidMap.get(sender);
+            }
+
+            const senderPhone = resolvedSender.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '');
+
             const eventData = {
                 sessionId,
                 messageId: msg.key.id,
-                from: sender,
+                from: resolvedSender,
+                rawSender: sender,
                 phone: senderPhone,
                 isGroup,
                 pushName,
@@ -287,7 +372,10 @@ async function startSession(sessionId, options = {}) {
             // Check auto-reply:
             // 1. Quick Reply button mapping check
             const candidateKeys = [body, buttonText, buttonId].filter(Boolean);
-            let matchedReply = findButtonReply(sessionState.buttonReplies, quotedMessageId, sender, candidateKeys);
+            let matchedReply = findButtonReply(sessionState.buttonReplies, quotedMessageId, resolvedSender, candidateKeys);
+            if (!matchedReply && sender !== resolvedSender) {
+                matchedReply = findButtonReply(sessionState.buttonReplies, quotedMessageId, sender, candidateKeys);
+            }
 
             // 2. Chatbot Auto-Reply Rules fallback
             if (!matchedReply && settings.autoReplyRules && Array.isArray(settings.autoReplyRules) && candidateKeys.length > 0) {
@@ -319,15 +407,16 @@ async function startSession(sessionId, options = {}) {
             // 3. Dispatch auto-reply if matched
             if (matchedReply) {
                 const replyContent = resolveSpintax(matchedReply);
-                console.log(`[${sessionId}] Quick Reply / Auto-Reply triggered from ${sender} ("${body}") -> "${replyContent}"`);
+                console.log(`[${sessionId}] Quick Reply / Auto-Reply triggered for ${resolvedSender} (sender: ${sender}, text: "${body}") -> "${replyContent}"`);
                 enqueueMessage(sessionId, {
                     type: 'text',
-                    to: sender,
+                    to: resolvedSender,
                     options: { text: replyContent }
                 }).then(sentResult => {
                     const autoReplyPayload = {
                         sessionId,
-                        recipient: sender,
+                        recipient: resolvedSender,
+                        originalSender: sender,
                         originalMessage: body,
                         replyText: replyContent,
                         messageId: sentResult?.messageId
@@ -405,12 +494,18 @@ async function processQueue(sessionId) {
 
         try {
             const socket = session.socket;
-            const isGroup = item.to.includes('@g.us');
-            const cleanPhone = item.to.split('@')[0].replace(/\D/g, '');
-            let targetJid = isGroup ? item.to : `${cleanPhone}@s.whatsapp.net`;
+            let targetJid = item.to;
+            if (targetJid.includes('@lid') && session.lidMap && session.lidMap.has(targetJid)) {
+                targetJid = session.lidMap.get(targetJid);
+            }
 
-            // Validate number on WhatsApp if personal JID
-            if (targetJid.endsWith('@s.whatsapp.net')) {
+            const isGroup = targetJid.includes('@g.us');
+            const isLid = targetJid.includes('@lid');
+
+            if (!isGroup && !isLid) {
+                const cleanPhone = targetJid.split('@')[0].replace(/\D/g, '');
+                targetJid = `${cleanPhone}@s.whatsapp.net`;
+                // Validate number on WhatsApp if personal JID
                 try {
                     const [res] = await socket.onWhatsApp(targetJid);
                     if (res?.exists) targetJid = res.jid;
@@ -461,13 +556,22 @@ async function processQueue(sessionId) {
                     let id = typeof btn === 'object' ? (btn.id || `btn_${idx}`) : `btn_${idx}`;
 
                     if (typeof btn === 'object') {
-                        replyText = btn.reply || btn.reply_text || btn.replyText || '';
-                        if (!replyText && (bType === 'quick_reply' || !bType)) {
-                            if (btn.value) replyText = btn.value;
-                            else if (btn.id && btn.id !== text && (btn.id.includes(' ') || btn.id.length > 15)) {
-                                replyText = btn.id;
+                        if (btn.reply === false || btn.reply_text === false) {
+                            replyText = null;
+                        } else {
+                            replyText = btn.reply || btn.reply_text || btn.replyText || '';
+                            if (!replyText && (bType === 'quick_reply' || !bType)) {
+                                if (btn.value && !btn.value.startsWith('http') && !btn.value.startsWith('+')) {
+                                    replyText = btn.value;
+                                } else if (btn.id && btn.id !== text && (btn.id.includes(' ') || btn.id.length > 15)) {
+                                    replyText = btn.id;
+                                } else {
+                                    replyText = `Thank you for choosing "${text}". Your response has been recorded.`;
+                                }
                             }
                         }
+                    } else if (typeof btn === 'string') {
+                        replyText = `Thank you for choosing "${btn}". Your response has been recorded.`;
                     }
 
                     if (replyText) {
@@ -492,6 +596,16 @@ async function processQueue(sessionId) {
                 if (session.messageStore.size > 5000) {
                     const firstKey = session.messageStore.keys().next().value;
                     session.messageStore.delete(firstKey);
+                }
+            }
+
+            // Cache recipient destination for quote reply matching & LID translation
+            if (sent?.key?.id && targetJid) {
+                if (!session.messageRecipients) session.messageRecipients = new Map();
+                session.messageRecipients.set(sent.key.id, targetJid);
+                if (session.messageRecipients.size > 5000) {
+                    const firstKey = session.messageRecipients.keys().next().value;
+                    session.messageRecipients.delete(firstKey);
                 }
             }
 

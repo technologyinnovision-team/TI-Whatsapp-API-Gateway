@@ -75,6 +75,9 @@ export function registerButtonReply(buttonReplies, baseDir, sessionId, { message
                 buttonReplies.byMessage.delete(oldest);
             }
         }
+        if (targetJid) {
+            msgMap._targetJid = String(targetJid).trim();
+        }
         for (const k of keys) {
             msgMap[k] = cleanReply;
         }
@@ -155,6 +158,15 @@ export function findButtonReply(buttonReplies, quotedMessageId, sender, candidat
     }
 
     return null;
+}
+
+/**
+ * Retrieves the original recipient JID of a button message from byMessage map.
+ */
+export function getOriginalRecipientFromMessage(buttonReplies, messageId) {
+    if (!buttonReplies || !messageId || !buttonReplies.byMessage) return null;
+    const msgMap = buttonReplies.byMessage.get(messageId);
+    return msgMap?._targetJid || null;
 }
 
 /**

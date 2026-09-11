@@ -77,6 +77,43 @@
 
     </div>
 
+    <!-- Connected WhatsApp Account IDs for API Card -->
+    <div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-4">
+        <div>
+            <h3 class="font-bold text-white text-base flex items-center space-x-2">
+                <i data-lucide="smartphone" class="w-5 h-5 text-wa-400"></i>
+                <span>Your WhatsApp Account IDs (Required for API)</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">Every REST API request requires an <code class="text-wa-400 font-mono">account_id</code> field matching one of your connected accounts below:</p>
+        </div>
+
+        {% if accounts %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {% for acc in accounts %}
+            <div class="bg-dark-900 p-3.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
+                <div>
+                    <div class="text-[11px] text-slate-400">Account Alias</div>
+                    <div class="font-bold text-white text-sm font-mono flex items-center gap-1.5 mt-0.5">
+                        <span>{{ acc.alias }}</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 font-mono mt-1">
+                        JSON: <code class="text-wa-400">"account_id": "{{ acc.alias }}"</code>
+                    </div>
+                </div>
+                <button type="button" onclick="navigator.clipboard.writeText('{{ acc.alias }}'); alert('Account ID copied: {{ acc.alias }}');" class="inline-flex items-center space-x-1 bg-dark-800 hover:bg-dark-700 text-wa-400 hover:text-white border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition" title="Copy Account ID">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span>Copy ID</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-xs text-slate-400 bg-dark-900 p-4 rounded-xl border border-slate-800 text-center">
+            No WhatsApp accounts linked yet. <a href="{{ url_for('dashboard') }}" class="text-wa-400 hover:underline font-semibold">Add a WhatsApp Account</a> to get your Account ID.
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Webhook Delivery Logs Card -->
     <div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-4">
         <div class="flex items-center justify-between">

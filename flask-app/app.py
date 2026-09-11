@@ -702,6 +702,7 @@ def messages():
 def settings():
     bridge_health = proxy_bridge('GET', '/health') or {}
     webhook_logs = proxy_bridge('GET', '/webhooks/logs') or {}
+    user_accounts = WhatsappAccount.query.filter_by(user_id=current_user.id).all()
 
     ports_info = {
         'web_port': WEB_PORT,
@@ -713,6 +714,7 @@ def settings():
     return render_template(
         'settings.html',
         user=current_user,
+        accounts=user_accounts,
         bridge_health=bridge_health,
         ports_info=ports_info,
         webhook_logs=webhook_logs.get('logs', [])
@@ -731,7 +733,14 @@ def regenerate_api_key():
 # ==========================================
 @app.route('/docs')
 def docs():
-    return render_template('docs.html')
+    user_accounts = []
+    if current_user.is_authenticated:
+        user_accounts = WhatsappAccount.query.filter_by(user_id=current_user.id).all()
+    return render_template(
+        'docs.html',
+        user=current_user if current_user.is_authenticated else None,
+        accounts=user_accounts
+    )
 
 @app.route('/docs/swagger')
 def docs_swagger():
@@ -744,6 +753,33 @@ def redoc():
 @app.route('/static/openapi.yaml')
 def openapi_yaml():
     return send_from_directory('static', 'openapi.yaml')
+
+def resolve_user_account(user_id, account_identifier):
+    """
+    Universally resolves a user's WhatsApp account by:
+    1. Integer database ID (e.g. 1 or "1")
+    2. Exact alias (e.g. "fahadstyles")
+    3. Case-insensitive alias (e.g. "FahadStyles")
+    4. Session UUID (e.g. "ad3eb97b-1aaf-482c-ae22-303bb36e16da")
+    """
+    if not account_identifier:
+        return None
+    raw = str(account_identifier).strip()
+    if raw.isdigit():
+        acc = WhatsappAccount.query.filter_by(user_id=user_id, id=int(raw)).first()
+        if acc:
+            return acc
+    acc = WhatsappAccount.query.filter_by(user_id=user_id, alias=raw).first()
+    if acc:
+        return acc
+    accounts = WhatsappAccount.query.filter_by(user_id=user_id).all()
+    for item in accounts:
+        if item.alias.lower() == raw.lower():
+            return item
+    acc = WhatsappAccount.query.filter_by(user_id=user_id, session_id=raw).first()
+    if acc:
+        return acc
+    return None
 
 # ==========================================
 # PUBLIC REST API (V1)
@@ -762,7 +798,7 @@ def api_send_text():
     if not account_alias or not to or not message:
         return jsonify({'error': 'Missing required fields: account_id, to, message'}), 400
 
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=account_alias).first()
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({'error': f"WhatsApp account '{account_alias}' not found"}), 404
 
@@ -813,7 +849,7 @@ def api_send_media():
     if not account_alias or not to or not media:
         return jsonify({'error': 'Missing required fields: account_id, to, media'}), 400
 
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=account_alias).first()
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({'error': 'Account not found'}), 404
 
@@ -848,14 +884,14 @@ def api_send_voice():
         return jsonify({'error': 'Unauthorized'}), 401
 
     data = request.json or {}
-    account_alias = data.get('account_id')
+    account_alias = data.get('account_id') or data.get('account')
     to = data.get('to')
     media = data.get('media') or data.get('url')
 
     if not account_alias or not to or not media:
         return jsonify({'error': 'Missing account_id, to, or media URL/base64'}), 400
 
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=account_alias).first()
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({'error': 'Account not found'}), 404
 
@@ -875,7 +911,7 @@ def api_send_poll():
         return jsonify({'error': 'Unauthorized'}), 401
 
     data = request.json or {}
-    account_alias = data.get('account_id')
+    account_alias = data.get('account_id') or data.get('account')
     to = data.get('to')
     name = data.get('name')
     values = data.get('values', [])
@@ -884,7 +920,7 @@ def api_send_poll():
     if not account_alias or not to or not name or len(values) < 2:
         return jsonify({'error': 'Missing params. Requires name and at least 2 values'}), 400
 
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=account_alias).first()
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({'error': 'Account not found'}), 404
 
@@ -916,7 +952,7 @@ def api_send_buttons():
     if not account_alias or not to or (not message and not title) or not buttons:
         return jsonify({'error': 'Missing required fields: account_id, to, message/title, buttons'}), 400
 
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=str(account_alias).strip()).first()
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({'error': f"Account '{account_alias}' not found"}), 404
 
@@ -953,14 +989,14 @@ def api_send_location():
         return jsonify({'error': 'Unauthorized'}), 401
 
     data = request.json or {}
-    account_alias = data.get('account_id')
+    account_alias = data.get('account_id') or data.get('account')
     to = data.get('to')
     lat = data.get('latitude')
     lng = data.get('longitude')
     name = data.get('name', '')
     address = data.get('address', '')
 
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=account_alias).first()
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({'error': 'Account not found'}), 404
 
@@ -982,12 +1018,12 @@ def api_send_reaction():
         return jsonify({'error': 'Unauthorized'}), 401
 
     data = request.json or {}
-    account_alias = data.get('account_id')
+    account_alias = data.get('account_id') or data.get('account')
     to = data.get('to')
     reaction = data.get('reaction') # e.g. '❤️', '👍'
     key = data.get('key') # WhatsApp message key object
 
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=account_alias).first()
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({'error': 'Account not found'}), 404
 
@@ -1031,16 +1067,7 @@ def api_send_legacy():
     if not account_alias or not to or (not message and not media and not title):
         return jsonify({"error": "Missing params. Required: account_id, to, message"}), 400
 
-    clean_alias = str(account_alias).strip()
-    account = WhatsappAccount.query.filter_by(user_id=user.id, alias=clean_alias).first()
-    if not account:
-        # Case-insensitive fallback
-        accounts = WhatsappAccount.query.filter_by(user_id=user.id).all()
-        for acc in accounts:
-            if acc.alias.lower() == clean_alias.lower():
-                account = acc
-                break
-
+    account = resolve_user_account(user.id, account_alias)
     if not account:
         return jsonify({"error": f"Account '{account_alias}' not found"}), 404
 

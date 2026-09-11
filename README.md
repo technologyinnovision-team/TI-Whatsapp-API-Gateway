@@ -29,14 +29,25 @@ Install and configure everything on any Linux VPS (Ubuntu, Debian, CentOS, AlmaL
 curl -sSL https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsapp-API/main/install.sh | bash
 ```
 
+### 🔄 Updating to the Latest Version:
+To update an existing installation without losing any data, sessions, or port configuration:
+```bash
+# Option 1: Via global CLI tool
+whatsapp-ctl update
+
+# Option 2: Via one-line updater script
+curl -sSL https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsapp-API/main/update.sh | bash
+```
+*(All `.env` settings, port bindings, connected WhatsApp sessions, and databases are 100% preserved!)*
+
 ### What the installer handles automatically:
 1. **OS & Architecture Auto-Detection**: Configures package managers and builds.
 2. **Node.js 20+ & Python 3 Setup**: Installs required runtime environments.
-3. **Smart Port Conflict Management**: Tests ports `5000` (Web) and `3001` (Bridge); auto-allocates free ports if busy.
-4. **Zero-Config Database Initialization**: Sets up resilient database layer (SQLite out-of-the-box or prompts for MySQL).
+3. **Smart Port Conflict Management**: Intelligently detects and preserves ports `5000` (Web) and `3001` (Bridge), automatically reclaiming them from previous WAAPI instances.
+4. **Zero-Config Database Initialization**: Sets up resilient database layer (SQLite out-of-the-box or MySQL/PostgreSQL).
 5. **Generates Cryptographic Secrets**: Generates secure random API keys and session encryption secrets.
 6. **Systemd Background Services**: Configures `whatsapp-bridge.service` and `whatsapp-web.service` with auto-restart on boot.
-7. **Installs Global CLI (`whatsapp-ctl`)**: Provides instant service management from your terminal.
+7. **Installs Global CLI (`whatsapp-ctl`)**: Provides instant service management from your terminal (`status`, `update`, `restart`, `logs`).
 
 ---
 
@@ -266,11 +277,17 @@ When installed on Linux, manage services with `whatsapp-ctl`:
 # Check service status
 whatsapp-ctl status
 
+# Update gateway to latest version (preserves all data and ports)
+whatsapp-ctl update
+
 # View live application logs
 whatsapp-ctl logs
 
 # Restart gateway services
 whatsapp-ctl restart
+
+# Verify system health
+whatsapp-ctl health
 
 # Check active ports
 whatsapp-ctl ports

@@ -45,7 +45,20 @@ if [ "$(id -u)" -ne 0 ]; then
     fi
 fi
 
-# 2. Distro Detection
+# 2. Determine Platform Directory & Detect Existing Installation
+INSTALL_DIR="$(pwd)"
+if [ ! -f "$INSTALL_DIR/flask-app/app.py" ]; then
+    INSTALL_DIR="/opt/whatsapp-gateway"
+fi
+
+# Pause running services if updating/re-installing so they don't block port detection
+if systemctl is-active --quiet whatsapp-web.service 2>/dev/null || systemctl is-active --quiet whatsapp-bridge.service 2>/dev/null; then
+    echo -e "${YELLOW}[!] Running WhatsApp Gateway services detected. Pausing them during setup/update...${NC}"
+    $SUDO systemctl stop whatsapp-web.service whatsapp-bridge.service 2>/dev/null || true
+    sleep 1
+fi
+
+# 3. Distro Detection
 echo -e "${BLUE}[1/7] Detecting Linux Distribution & Hardware...${NC}"
 OS="unknown"
 if [ -f /etc/os-release ]; then
@@ -58,8 +71,24 @@ elif [ -f /etc/redhat-release ]; then
 fi
 echo -e "${GREEN}  ✓ Detected OS: ${OS} (${PRETTY_NAME:-Linux}) on $(uname -m)${NC}"
 
-# 3. Port Conflict Detection & Resolution
+# 4. Port Conflict Detection & Resolution
 echo -e "${BLUE}[2/7] Checking Port Management & Allocations...${NC}"
+
+# Reclaim port from any lingering WAAPI processes
+kill_waapi_on_port() {
+    local port=$1
+    if command -v lsof >/dev/null 2>&1; then
+        local pids=$(lsof -ti :$port 2>/dev/null || true)
+        for pid in $pids; do
+            local cmd=$(ps -p $pid -o cmd= 2>/dev/null || true)
+            if [[ "$cmd" =~ "whatsapp" || "$cmd" =~ "gunicorn" || "$cmd" =~ "server.js" || "$cmd" =~ "flask" ]]; then
+                echo -e "${YELLOW}  → Reclaiming port $port from previous WhatsApp Gateway process (PID $pid)...${NC}" >&2
+                $SUDO kill -9 $pid 2>/dev/null || true
+                sleep 0.5
+            fi
+        done
+    fi
+}
 
 is_port_busy() {
     local port=$1
@@ -70,22 +99,36 @@ is_port_busy() {
     elif command -v netstat >/dev/null 2>&1; then
         netstat -tuln | grep -q ":$port "
     else
-        # Fallback to bash tcp connection probe
         (echo >/dev/tcp/127.0.0.1/$port) >/dev/null 2>&1
     fi
 }
 
 find_free_port() {
     local candidate=$1
+    kill_waapi_on_port $candidate
     while is_port_busy $candidate; do
-        echo -e "${YELLOW}  ⚠ Port $candidate is in use, checking next port...${NC}"
+        echo -e "${YELLOW}  ⚠ Port $candidate is in use by another application, checking next port...${NC}" >&2
         candidate=$((candidate + 1))
+        kill_waapi_on_port $candidate
     done
     echo $candidate
 }
 
 DEFAULT_WEB_PORT=5000
 DEFAULT_BRIDGE_PORT=3001
+
+# Preserve existing ports from .env if updating
+if [ -f "$INSTALL_DIR/.env" ]; then
+    SAVED_WEB_PORT=$(grep -E '^WEB_PORT=' "$INSTALL_DIR/.env" 2>/dev/null | head -n1 | cut -d'=' -f2 | tr -d ' "\r\n')
+    SAVED_BRIDGE_PORT=$(grep -E '^BRIDGE_PORT=' "$INSTALL_DIR/.env" 2>/dev/null | head -n1 | cut -d'=' -f2 | tr -d ' "\r\n')
+    if [[ "$SAVED_WEB_PORT" =~ ^[0-9]+$ ]]; then
+        DEFAULT_WEB_PORT=$SAVED_WEB_PORT
+    fi
+    if [[ "$SAVED_BRIDGE_PORT" =~ ^[0-9]+$ ]]; then
+        DEFAULT_BRIDGE_PORT=$SAVED_BRIDGE_PORT
+    fi
+    echo -e "${CYAN}  → Found existing port configuration: Web=${DEFAULT_WEB_PORT}, Bridge=${DEFAULT_BRIDGE_PORT}${NC}"
+fi
 
 TARGET_WEB_PORT=$(find_free_port $DEFAULT_WEB_PORT)
 TARGET_BRIDGE_PORT=$(find_free_port $DEFAULT_BRIDGE_PORT)
@@ -98,7 +141,7 @@ fi
 echo -e "${GREEN}  ✓ Web Gateway Assigned Port: ${WHITE}${TARGET_WEB_PORT}${NC}"
 echo -e "${GREEN}  ✓ WhatsApp Bridge Assigned Port: ${WHITE}${TARGET_BRIDGE_PORT}${NC}"
 
-# 4. Dependency Installation
+# 5. Dependency Installation
 echo -e "${BLUE}[3/7] Installing System Dependencies (Node.js 20+, Python 3, Build Tools)...${NC}"
 
 case "$OS" in
@@ -140,18 +183,18 @@ echo -e "${GREEN}  ✓ Node.js version: $(node -v)${NC}"
 echo -e "${GREEN}  ✓ NPM version: $(npm -v)${NC}"
 echo -e "${GREEN}  ✓ Python version: $(python3 --version)${NC}"
 
-# 5. Project Directory & Source Code
+# 6. Project Directory & Source Code Setup
 echo -e "${BLUE}[4/7] Configuring Platform Directory & Environment...${NC}"
 
-INSTALL_DIR="$(pwd)"
-# If install.sh was run via curl outside of the repo, clone or setup
-if [ ! -f "$INSTALL_DIR/flask-app/app.py" ]; then
-    INSTALL_DIR="/opt/whatsapp-gateway"
-    echo -e "${CYAN}  → Cloning repository to $INSTALL_DIR...${NC}"
+if [ "$INSTALL_DIR" = "/opt/whatsapp-gateway" ]; then
+    echo -e "${CYAN}  → Setting up platform directory at $INSTALL_DIR...${NC}"
     $SUDO mkdir -p "$INSTALL_DIR"
     $SUDO chown -R "$(id -u):$(id -g)" "$INSTALL_DIR" 2>/dev/null || true
     if [ -d "$INSTALL_DIR/.git" ]; then
         cd "$INSTALL_DIR"
+        echo -e "${CYAN}  → Pulling latest updates from GitHub...${NC}"
+        git fetch origin main
+        git checkout main 2>/dev/null || true
         git pull origin main || true
     else
         git clone https://github.com/technologyinnovision-team/TI-Whatsapp-API.git "$INSTALL_DIR"
@@ -159,9 +202,12 @@ if [ ! -f "$INSTALL_DIR/flask-app/app.py" ]; then
     fi
 else
     cd "$INSTALL_DIR"
+    if [ -d ".git" ]; then
+        git pull origin main 2>/dev/null || true
+    fi
 fi
 
-# Setup .env
+# Setup .env (preserve if updating, generate if fresh)
 if [ ! -f ".env" ]; then
     echo -e "${CYAN}  → Generating cryptographically secure .env configuration...${NC}"
     SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null || openssl rand -hex 32)
@@ -190,7 +236,7 @@ DEFAULT_MODE=standard
 GLOBAL_WEBHOOK_URL=
 EOF
 else
-    # Update ports in existing .env if needed
+    echo -e "${GREEN}  ✓ Preserving existing .env configuration (secrets, DB, credentials)...${NC}"
     sed -i "s/^WEB_PORT=.*/WEB_PORT=${TARGET_WEB_PORT}/" .env 2>/dev/null || true
     sed -i "s/^BRIDGE_PORT=.*/BRIDGE_PORT=${TARGET_BRIDGE_PORT}/" .env 2>/dev/null || true
     sed -i "s|^BRIDGE_URL=.*|BRIDGE_URL=http://127.0.0.1:${TARGET_BRIDGE_PORT}|" .env 2>/dev/null || true
@@ -199,14 +245,14 @@ fi
 # Ensure auth_info directory exists with proper permissions
 mkdir -p wa-bridge/auth_info
 chmod -R 755 wa-bridge/auth_info
+chmod +x update.sh 2>/dev/null || true
 
-# 6. Build & Dependency Setup
+# 7. Build & Dependency Setup
 echo -e "${BLUE}[5/7] Building Python Virtual Environment & Node.js Bridge...${NC}"
 
 # Setup Python venv
 if [ ! -d "flask-app/venv" ]; then
     python3 -m venv flask-app/venv 2>/dev/null || python3 -m virtualenv flask-app/venv 2>/dev/null || {
-        # Fallback if venv package is quirky
         python3 -m pip install --user --break-system-packages virtualenv 2>/dev/null || true
         ~/.local/bin/virtualenv flask-app/venv
     }
@@ -222,7 +268,7 @@ npm install --silent --no-audit
 cd ..
 echo -e "${GREEN}  ✓ WhatsApp Bridge dependencies installed successfully.${NC}"
 
-# 7. Systemd Services & CLI Helper Setup
+# 8. Systemd Services & CLI Helper Setup
 echo -e "${BLUE}[6/7] Installing Systemd Services & CLI Tool...${NC}"
 
 SERVICE_USER="$(whoami)"
@@ -280,11 +326,13 @@ EOF
 fi
 
 # Install CLI Management Tool: whatsapp-ctl
-cat << 'EOF' | $SUDO tee /usr/local/bin/whatsapp-ctl > /dev/null
+cat << EOF | $SUDO tee /usr/local/bin/whatsapp-ctl > /dev/null
 #!/usr/bin/env bash
 # WhatsApp Gateway Command Line Manager
 
-case "$1" in
+INSTALL_DIR="${INSTALL_DIR}"
+
+case "\$1" in
     status)
         echo "=== WhatsApp Bridge Status ==="
         systemctl status whatsapp-bridge --no-pager
@@ -308,10 +356,25 @@ case "$1" in
         journalctl -u whatsapp-web -u whatsapp-bridge -f
         ;;
     ports)
-        ss -tuln | grep -E ':(5000|3001|[0-9]{4}) '
+        ss -tuln | grep -E ':(${TARGET_WEB_PORT}|${TARGET_BRIDGE_PORT}|5000|3001|[0-9]{4}) ' || true
+        ;;
+    health)
+        echo "=== WhatsApp Bridge Health ==="
+        curl -s http://127.0.0.1:${TARGET_BRIDGE_PORT}/health || echo "Bridge unreachable"
+        echo ""
+        echo "=== WhatsApp Web Gateway Health ==="
+        curl -s http://127.0.0.1:${TARGET_WEB_PORT}/api/v1/system/health || echo "Web Gateway unreachable"
+        echo ""
+        ;;
+    update)
+        if [ -f "\$INSTALL_DIR/update.sh" ]; then
+            bash "\$INSTALL_DIR/update.sh"
+        else
+            curl -sSL https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsapp-API/main/update.sh | bash
+        fi
         ;;
     *)
-        echo "Usage: whatsapp-ctl {status|start|stop|restart|logs|ports}"
+        echo "Usage: whatsapp-ctl {status|start|stop|restart|logs|ports|health|update}"
         exit 1
         ;;
 esac
@@ -320,7 +383,7 @@ EOF
 $SUDO chmod +x /usr/local/bin/whatsapp-ctl
 echo -e "${GREEN}  ✓ Global CLI tool installed: whatsapp-ctl${NC}"
 
-# 8. Service Health Check & Verification
+# 9. Service Health Check & Verification
 echo -e "${BLUE}[7/7] Verifying System Health & Readiness...${NC}"
 sleep 3
 
@@ -337,7 +400,8 @@ echo -e "${CYAN}  ✦ Bridge Core API:        ${WHITE}http://localhost:${TARGET_
 echo -e "${GREEN}--------------------------------------------------------------------------------${NC}"
 echo -e "${YELLOW}  🛡️  Anti-Ban Engine:       ENABLED (Queue + Human Typing Jitter + Spintax)${NC}"
 echo -e "${YELLOW}  📲  Pairing Options:       QR Code Scanning + 8-Digit Phone Pairing Code${NC}"
-echo -e "${YELLOW}  🔌  Management CLI:       whatsapp-ctl status | whatsapp-ctl restart | whatsapp-ctl logs${NC}"
+echo -e "${YELLOW}  🔘  Interactive Buttons:  ENABLED (CTA Links, Calls, Coupon Codes)${NC}"
+echo -e "${YELLOW}  🔌  Management CLI:       whatsapp-ctl status | whatsapp-ctl update | whatsapp-ctl logs${NC}"
 echo -e "${GREEN}================================================================================\n${NC}"
 echo -e "${WHITE}To get started:${NC}"
 echo -e " 1. Open ${CYAN}http://${PUBLIC_IP}:${TARGET_WEB_PORT}${NC} in your browser."

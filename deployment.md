@@ -21,16 +21,33 @@ The script automatically:
 * Configures and starts `whatsapp-bridge.service` and `whatsapp-web.service` via Systemd.
 * Installs the `whatsapp-ctl` command line manager.
 
-### 2. Service Management
+### 2. Updating Platform & Preserving Ports
+Whenever new updates are pushed, run either:
+```bash
+# Method 1: Using the global CLI tool
+whatsapp-ctl update
+
+# Method 2: Using the one-line updater script
+curl -sSL https://raw.githubusercontent.com/technologyinnovision-team/TI-Whatsapp-API/main/update.sh | bash
+```
+*(All databases, WhatsApp authentication tokens, and port configurations on 5000 / 3001 are safely preserved!)*
+
+### 3. Service Management
 ```bash
 # Check status of both services
 whatsapp-ctl status
+
+# Update gateway to latest version
+whatsapp-ctl update
 
 # View live consolidated logs
 whatsapp-ctl logs
 
 # Restart services
 whatsapp-ctl restart
+
+# Verify system health
+whatsapp-ctl health
 ```
 
 ---

@@ -249,11 +249,16 @@ export async function buildInteractiveButtonsMessage(socket, targetJid, options 
             };
         }
         // 4. Quick Reply Button
+        const displayText = btn.text || btn.displayText || 'Option';
+        let btnId = btn.id;
+        if (!btnId || btnId.includes(' ') || btnId.length > 32) {
+            btnId = `btn_${idx}_` + displayText.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 16);
+        }
         return {
             name: 'quick_reply',
             buttonParamsJson: JSON.stringify({
-                display_text: btn.text || btn.displayText || 'Option',
-                id: btn.id || 'btn_' + idx
+                display_text: displayText,
+                id: btnId
             })
         };
     });

@@ -351,6 +351,11 @@ def view_account(id):
     if account.user_id != current_user.id:
         abort(403)
 
+    try:
+        sync_rules_to_bridge(current_user.id)
+    except Exception:
+        pass
+
     status_data = proxy_bridge('GET', f'/session/{account.session_id}/status') or {}
     qr_data = proxy_bridge('GET', f'/session/{account.session_id}/qr') or {}
     safety_data = proxy_bridge('GET', f'/session/{account.session_id}/safety') or {}
@@ -632,6 +637,52 @@ def delete_chatbot_rule(id):
     sync_rules_to_bridge(current_user.id)
     flash('Rule deleted', 'success')
     return redirect(url_for('chatbot'))
+
+@app.route('/internal/event', methods=['POST'])
+def internal_event_listener():
+    data = request.json or {}
+    event_type = data.get('event')
+    payload = data.get('data', {})
+    session_id = payload.get('sessionId') or data.get('sessionId')
+    if not session_id:
+        return jsonify({'status': 'ignored', 'reason': 'missing sessionId'}), 200
+
+    account = WhatsappAccount.query.filter_by(session_id=session_id).first()
+    if not account:
+        return jsonify({'status': 'ignored', 'reason': 'unknown account'}), 200
+
+    recipient = payload.get('phone') or payload.get('from', '').replace('@s.whatsapp.net', '').replace('@g.us', '') or payload.get('recipient', '')
+    msg_type = payload.get('type') or 'text'
+    body = payload.get('body') or payload.get('replyText') or ''
+    msg_id = payload.get('messageId')
+
+    if event_type == 'message.received':
+        log = MessageLog(
+            user_id=account.user_id,
+            account_id=account.id,
+            recipient=recipient,
+            message_type=msg_type,
+            content_preview=(body[:200] if body else '[Incoming media/event]'),
+            status='received',
+            message_id=msg_id
+        )
+        db.session.add(log)
+        db.session.commit()
+    elif event_type == 'message.auto_reply':
+        reply_text = payload.get('replyText') or ''
+        log = MessageLog(
+            user_id=account.user_id,
+            account_id=account.id,
+            recipient=recipient,
+            message_type='auto_reply',
+            content_preview=f"Auto-Reply: {reply_text[:180]}",
+            status='sent',
+            message_id=msg_id
+        )
+        db.session.add(log)
+        db.session.commit()
+
+    return jsonify({'status': 'ok'}), 200
 
 # ==========================================
 # MESSAGE LOGS & AUDIT TRAIL

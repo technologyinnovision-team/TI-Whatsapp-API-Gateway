@@ -19,6 +19,7 @@ import {
 import { resolveSpintax, calculateTypingDelay, calculateIntervalDelay, SessionSafetyTracker } from './lib/anti-ban.js';
 import { buildMessagePayload, buildInteractiveButtonsMessage, getInteractiveAdditionalNodes } from './lib/media.js';
 import { dispatchWebhook, getRecentWebhookLogs } from './lib/webhook.js';
+import { loadButtonReplies, saveButtonReplies, registerButtonReply, findButtonReply, extractIncomingMessageData } from './lib/button-replies.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config(); // local fallback
@@ -32,6 +33,18 @@ const PORT = parseInt(process.env.BRIDGE_PORT || process.env.PORT || '3001', 10)
 const BASE_AUTH_DIR = path.resolve(process.env.AUTH_DIR || './auth_info');
 const GLOBAL_WEBHOOK_URL = process.env.GLOBAL_WEBHOOK_URL || '';
 const GLOBAL_WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
+const FLASK_PORT = parseInt(process.env.WEB_PORT || '5000', 10);
+const FLASK_INTERNAL_URL = process.env.FLASK_INTERNAL_URL || `http://127.0.0.1:${FLASK_PORT}`;
+
+function notifyFlaskInternal(eventType, data) {
+    try {
+        fetch(`${FLASK_INTERNAL_URL}/internal/event`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: eventType, data })
+        }).catch(() => {});
+    } catch (e) {}
+}
 
 if (!fs.existsSync(BASE_AUTH_DIR)) {
     fs.mkdirSync(BASE_AUTH_DIR, { recursive: true });
@@ -118,7 +131,8 @@ async function startSession(sessionId, options = {}) {
         settings: settings,
         autoOfflineTimer: null,
         chats: new Map(),
-        contacts: new Map()
+        contacts: new Map(),
+        buttonReplies: loadButtonReplies(BASE_AUTH_DIR, sessionId)
     };
     sessions.set(sessionId, sessionState);
 
@@ -246,25 +260,7 @@ async function startSession(sessionId, options = {}) {
             const senderPhone = sender.replace('@s.whatsapp.net', '').replace('@g.us', '');
             const pushName = msg.pushName || '';
 
-            // Extract message body
-            let body = '';
-            let messageType = 'text';
-            if (msg.message?.conversation) {
-                body = msg.message.conversation;
-            } else if (msg.message?.extendedTextMessage?.text) {
-                body = msg.message.extendedTextMessage.text;
-            } else if (msg.message?.imageMessage?.caption) {
-                body = msg.message.imageMessage.caption;
-                messageType = 'image';
-            } else if (msg.message?.videoMessage?.caption) {
-                body = msg.message.videoMessage.caption;
-                messageType = 'video';
-            } else if (msg.message?.audioMessage) {
-                messageType = 'audio';
-            } else if (msg.message?.documentMessage) {
-                body = msg.message.documentMessage.fileName || '';
-                messageType = 'document';
-            }
+            const { body, messageType, buttonId, buttonText, quotedMessageId } = extractIncomingMessageData(msg);
 
             const eventData = {
                 sessionId,
@@ -275,39 +271,72 @@ async function startSession(sessionId, options = {}) {
                 pushName,
                 type: messageType,
                 body,
+                buttonId,
+                buttonText,
+                quotedMessageId,
                 timestamp: msg.messageTimestamp
             };
 
             // Dispatch webhook
             dispatchWebhook(settings.webhookUrl || GLOBAL_WEBHOOK_URL, 'message.received', eventData, settings.webhookSecret || GLOBAL_WEBHOOK_SECRET);
+            notifyFlaskInternal('message.received', eventData);
+            if (messageType === 'interactive_response' || messageType === 'button_reply' || buttonId) {
+                dispatchWebhook(settings.webhookUrl || GLOBAL_WEBHOOK_URL, 'message.button_clicked', eventData, settings.webhookSecret || GLOBAL_WEBHOOK_SECRET);
+            }
 
-            // Check auto-reply rules
-            if (settings.autoReplyRules && Array.isArray(settings.autoReplyRules) && body) {
+            // Check auto-reply:
+            // 1. Quick Reply button mapping check
+            const candidateKeys = [body, buttonText, buttonId].filter(Boolean);
+            let matchedReply = findButtonReply(sessionState.buttonReplies, quotedMessageId, sender, candidateKeys);
+
+            // 2. Chatbot Auto-Reply Rules fallback
+            if (!matchedReply && settings.autoReplyRules && Array.isArray(settings.autoReplyRules) && candidateKeys.length > 0) {
                 for (const rule of settings.autoReplyRules) {
                     if (!rule.enabled || !rule.replyText) continue;
                     let matched = false;
-                    const cleanMsg = body.trim().toLowerCase();
                     const trigger = (rule.trigger || '').trim().toLowerCase();
 
-                    if (rule.matchType === 'exact' && cleanMsg === trigger) matched = true;
-                    else if (rule.matchType === 'contains' && cleanMsg.includes(trigger)) matched = true;
-                    else if (rule.matchType === 'starts_with' && cleanMsg.startsWith(trigger)) matched = true;
-                    else if (rule.matchType === 'regex') {
-                        try {
-                            if (new RegExp(rule.trigger, 'i').test(cleanMsg)) matched = true;
-                        } catch (e) {}
+                    for (const term of candidateKeys) {
+                        const cleanMsg = term.trim().toLowerCase();
+                        if (rule.matchType === 'exact' && cleanMsg === trigger) matched = true;
+                        else if (rule.matchType === 'contains' && cleanMsg.includes(trigger)) matched = true;
+                        else if (rule.matchType === 'starts_with' && cleanMsg.startsWith(trigger)) matched = true;
+                        else if (rule.matchType === 'regex') {
+                            try {
+                                if (new RegExp(rule.trigger, 'i').test(cleanMsg)) matched = true;
+                            } catch (e) {}
+                        }
+                        if (matched) break;
                     }
 
                     if (matched) {
-                        const replyContent = resolveSpintax(rule.replyText);
-                        enqueueMessage(sessionId, {
-                            type: 'text',
-                            to: sender,
-                            options: { text: replyContent }
-                        });
+                        matchedReply = rule.replyText;
                         break;
                     }
                 }
+            }
+
+            // 3. Dispatch auto-reply if matched
+            if (matchedReply) {
+                const replyContent = resolveSpintax(matchedReply);
+                console.log(`[${sessionId}] Quick Reply / Auto-Reply triggered from ${sender} ("${body}") -> "${replyContent}"`);
+                enqueueMessage(sessionId, {
+                    type: 'text',
+                    to: sender,
+                    options: { text: replyContent }
+                }).then(sentResult => {
+                    const autoReplyPayload = {
+                        sessionId,
+                        recipient: sender,
+                        originalMessage: body,
+                        replyText: replyContent,
+                        messageId: sentResult?.messageId
+                    };
+                    dispatchWebhook(settings.webhookUrl || GLOBAL_WEBHOOK_URL, 'message.auto_reply', autoReplyPayload, settings.webhookSecret || GLOBAL_WEBHOOK_SECRET);
+                    notifyFlaskInternal('message.auto_reply', autoReplyPayload);
+                }).catch(err => {
+                    console.error(`[${sessionId}] Auto-reply dispatch failed:`, err.message);
+                });
             }
         }
     });
@@ -420,6 +449,37 @@ async function processQueue(sessionId) {
                     additionalNodes
                 });
                 sent = msg;
+
+                // Register Quick Reply mappings for automatic response on click
+                const rawButtons = item.options?.buttons || [];
+                for (let idx = 0; idx < rawButtons.length; idx++) {
+                    const btn = rawButtons[idx];
+                    if (!btn) continue;
+                    const bType = typeof btn === 'string' ? 'quick_reply' : (btn.type || '').toLowerCase();
+                    const text = typeof btn === 'string' ? btn : (btn.text || btn.displayText || '');
+                    let replyText = null;
+                    let id = typeof btn === 'object' ? (btn.id || `btn_${idx}`) : `btn_${idx}`;
+
+                    if (typeof btn === 'object') {
+                        replyText = btn.reply || btn.reply_text || btn.replyText || '';
+                        if (!replyText && (bType === 'quick_reply' || !bType)) {
+                            if (btn.value) replyText = btn.value;
+                            else if (btn.id && btn.id !== text && (btn.id.includes(' ') || btn.id.length > 15)) {
+                                replyText = btn.id;
+                            }
+                        }
+                    }
+
+                    if (replyText) {
+                        registerButtonReply(session.buttonReplies, BASE_AUTH_DIR, sessionId, {
+                            messageId: sent?.key?.id,
+                            targetJid,
+                            buttonId: id,
+                            buttonText: text,
+                            replyText
+                        });
+                    }
+                }
             } else {
                 const payload = await buildMessagePayload(item.type, item.options);
                 sent = await socket.sendMessage(targetJid, payload);

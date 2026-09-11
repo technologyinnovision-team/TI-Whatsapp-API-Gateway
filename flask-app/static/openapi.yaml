@@ -307,7 +307,7 @@ paths:
                     properties:
                       type:
                         type: string
-                        enum: [url, call, copy, reply]
+                        enum: [url, call, copy, quick_reply, reply]
                       text:
                         type: string
                       url:
@@ -316,13 +316,18 @@ paths:
                         type: string
                       code:
                         type: string
+                      reply:
+                        type: string
+                        description: Automated reply text sent back when recipient taps this button.
+                      id:
+                        type: string
                   example:
                     - type: "url"
                       text: "Visit Store"
                       url: "https://fahadstyles.com"
-                    - type: "call"
-                      text: "Call Support"
-                      phone: "+923001234567"
+                    - type: "quick_reply"
+                      text: "Confirm Order"
+                      reply: "Thank you! Your order has been confirmed."
                     - type: "copy"
                       text: "Copy Coupon"
                       code: "FAHAD20"

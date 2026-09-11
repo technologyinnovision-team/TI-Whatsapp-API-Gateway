@@ -439,9 +439,9 @@ console.log(res.data);</pre>
                     <div class="bg-dark-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
                         <div class="font-bold text-purple-400 flex items-center space-x-1.5">
                             <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
-                            <span>4. Quick Reply Button</span>
+                            <span>4. Quick Reply with Auto-Response</span>
                         </div>
-                        <p class="text-slate-400 text-[11px]"><code class="text-white font-mono">type: "reply"</code> — Taps to send instant reply in chat.</p>
+                        <p class="text-slate-400 text-[11px]"><code class="text-white font-mono">type: "quick_reply"</code> — Taps button and gateway automatically replies back with your configured <code class="text-emerald-400 font-mono">"reply": "..."</code> message!</p>
                     </div>
                 </div>
 
@@ -485,9 +485,9 @@ $payload = [
             "code" => "FAHAD20"
         ],
         [
-            "type" => "reply",
-            "text" => "📦 Track Order",
-            "id"   => "track_order"
+            "type"  => "quick_reply",
+            "text"  => "📦 Track Order",
+            "reply" => "Your order #1042 is on its way and will arrive tomorrow!"
         ]
     ]
 ];
@@ -567,7 +567,7 @@ payload = {
     "buttons": [
         {"type": "url", "text": "Visit Website", "url": "https://fahadstyles.com"},
         {"type": "copy", "text": "Copy Coupon", "code": "FLASH20"},
-        {"type": "call", "text": "Call Support", "phone": "+923001234567"}
+        {"type": "quick_reply", "text": "Confirm Order", "reply": "Thank you! Your order has been confirmed."}
     ]
 }
 

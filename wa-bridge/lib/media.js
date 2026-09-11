@@ -1,7 +1,8 @@
 import axios from 'axios';
 import mime from 'mime-types';
 import fs from 'fs';
-import { generateWAMessageFromContent, prepareWAMessageMedia } from '@whiskeysockets/baileys';
+import sharp from 'sharp';
+import { proto, generateWAMessageFromContent, prepareWAMessageMedia } from '@whiskeysockets/baileys';
 
 /**
  * Resolves media input (URL, base64 data string, or local path) into a Buffer and metadata.
@@ -178,6 +179,33 @@ export async function buildMessagePayload(type, options) {
  * - cta_copy: One-tap copy coupon/promo codes
  * - quick_reply: Interactive quick replies
  */
+export function getInteractiveAdditionalNodes() {
+    return [
+        {
+            tag: 'biz',
+            attrs: {},
+            content: [
+                {
+                    tag: 'interactive',
+                    attrs: {
+                        type: 'native_flow',
+                        v: '1'
+                    },
+                    content: [
+                        {
+                            tag: 'native_flow',
+                            attrs: {
+                                name: 'mixed',
+                                v: '9'
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ];
+}
+
 export async function buildInteractiveButtonsMessage(socket, targetJid, options = {}) {
     const rawButtons = options.buttons || [];
     const formattedButtons = rawButtons.map((btn, idx) => {
@@ -189,7 +217,7 @@ export async function buildInteractiveButtonsMessage(socket, targetJid, options 
         }
         const bType = (btn.type || '').toLowerCase();
         // 1. URL / Website Link Button
-        if (bType === 'url' || btn.url) {
+        if (bType === 'url' || bType === 'cta_url' || btn.url) {
             return {
                 name: 'cta_url',
                 buttonParamsJson: JSON.stringify({
@@ -200,7 +228,7 @@ export async function buildInteractiveButtonsMessage(socket, targetJid, options 
             };
         }
         // 2. Call Phone Number Button
-        if (bType === 'call' || btn.phone || btn.phoneNumber) {
+        if (bType === 'call' || bType === 'cta_call' || btn.phone || btn.phoneNumber) {
             return {
                 name: 'cta_call',
                 buttonParamsJson: JSON.stringify({
@@ -210,7 +238,7 @@ export async function buildInteractiveButtonsMessage(socket, targetJid, options 
             };
         }
         // 3. Copy Code Button
-        if (bType === 'copy' || btn.code || btn.copy_code) {
+        if (bType === 'copy' || bType === 'cta_copy' || btn.code || btn.copy_code) {
             return {
                 name: 'cta_copy',
                 buttonParamsJson: JSON.stringify({
@@ -230,34 +258,60 @@ export async function buildInteractiveButtonsMessage(socket, targetJid, options 
         };
     });
 
-    let header = { title: options.title || '', hasMediaAttachment: false };
+    let header = undefined;
     if (options.media || options.image) {
         try {
             const { buffer } = await resolveMediaBuffer(options.media || options.image, 'image/jpeg');
-            const media = await prepareWAMessageMedia({ image: buffer }, { upload: socket.waUploadToServer });
-            header = {
+            // Ensure image is standard JPEG for WhatsApp protocol
+            let jpegBuffer = buffer;
+            try {
+                jpegBuffer = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
+            } catch (err) {
+                console.warn('Sharp JPEG conversion fallback:', err.message);
+            }
+
+            const media = await prepareWAMessageMedia({ image: jpegBuffer }, { upload: socket.waUploadToServer });
+            header = proto.Message.InteractiveMessage.Header.create({
                 title: options.title || '',
                 hasMediaAttachment: true,
                 imageMessage: media.imageMessage
-            };
+            });
         } catch (e) {
             console.error('Failed to attach media to button header:', e.message);
-        }
-    }
-
-    const interactiveMessage = {
-        body: { text: options.text || options.message || '' },
-        footer: { text: options.footer || '' },
-        header: header,
-        nativeFlowMessage: { buttons: formattedButtons }
-    };
-
-    const messageContent = {
-        viewOnceMessage: {
-            message: {
-                interactiveMessage
+            if (options.title) {
+                header = proto.Message.InteractiveMessage.Header.create({
+                    title: options.title,
+                    hasMediaAttachment: false
+                });
             }
         }
+    } else if (options.title) {
+        header = proto.Message.InteractiveMessage.Header.create({
+            title: options.title,
+            hasMediaAttachment: false
+        });
+    }
+
+    const interactiveMessageObj = {
+        body: proto.Message.InteractiveMessage.Body.create({ text: options.text || options.message || '' }),
+        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+            buttons: formattedButtons
+        })
+    };
+
+    if (header) {
+        interactiveMessageObj.header = header;
+    }
+    if (options.footer) {
+        interactiveMessageObj.footer = proto.Message.InteractiveMessage.Footer.create({ text: options.footer });
+    }
+
+    const messageContent = {
+        messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+        },
+        interactiveMessage: proto.Message.InteractiveMessage.create(interactiveMessageObj)
     };
 
     return generateWAMessageFromContent(targetJid, messageContent, {

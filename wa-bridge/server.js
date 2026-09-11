@@ -17,7 +17,7 @@ import {
 } from '@whiskeysockets/baileys';
 
 import { resolveSpintax, calculateTypingDelay, calculateIntervalDelay, SessionSafetyTracker } from './lib/anti-ban.js';
-import { buildMessagePayload, buildInteractiveButtonsMessage } from './lib/media.js';
+import { buildMessagePayload, buildInteractiveButtonsMessage, getInteractiveAdditionalNodes } from './lib/media.js';
 import { dispatchWebhook, getRecentWebhookLogs } from './lib/webhook.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
@@ -128,6 +128,10 @@ async function startSession(sessionId, options = {}) {
     const { version } = await fetchLatestBaileysVersion();
     const agent = createProxyAgent(settings.proxyUrl);
 
+    if (!sessionState.messageStore) {
+        sessionState.messageStore = new Map();
+    }
+
     const sock = makeWASocket({
         version,
         auth: {
@@ -146,6 +150,12 @@ async function startSession(sessionId, options = {}) {
         generateHighQualityLinkPreview: true,
         markOnlineOnConnect: false,
         msgRetryCounterCache: sessionState.retryCache,
+        getMessage: async (key) => {
+            if (sessionState.messageStore && sessionState.messageStore.has(key.id)) {
+                return sessionState.messageStore.get(key.id);
+            }
+            return undefined;
+        },
         agent: agent
     });
 
@@ -366,7 +376,9 @@ async function processQueue(sessionId) {
 
         try {
             const socket = session.socket;
-            let targetJid = item.to.includes('@') ? item.to : `${item.to.replace(/\D/g, '')}@s.whatsapp.net`;
+            const isGroup = item.to.includes('@g.us');
+            const cleanPhone = item.to.split('@')[0].replace(/\D/g, '');
+            let targetJid = isGroup ? item.to : `${cleanPhone}@s.whatsapp.net`;
 
             // Validate number on WhatsApp if personal JID
             if (targetJid.endsWith('@s.whatsapp.net')) {
@@ -402,11 +414,25 @@ async function processQueue(sessionId) {
             let sent;
             if (item.type === 'buttons' || (item.options?.buttons && Array.isArray(item.options.buttons) && item.options.buttons.length > 0)) {
                 const msg = await buildInteractiveButtonsMessage(socket, targetJid, item.options);
-                await socket.relayMessage(targetJid, msg.message, { messageId: msg.key.id });
+                const additionalNodes = getInteractiveAdditionalNodes();
+                await socket.relayMessage(targetJid, msg.message, {
+                    messageId: msg.key.id,
+                    additionalNodes
+                });
                 sent = msg;
             } else {
                 const payload = await buildMessagePayload(item.type, item.options);
                 sent = await socket.sendMessage(targetJid, payload);
+            }
+
+            // Cache sent message in session store for signal decryption retry / linked devices sync
+            if (sent?.key?.id && sent?.message) {
+                if (!session.messageStore) session.messageStore = new Map();
+                session.messageStore.set(sent.key.id, sent.message);
+                if (session.messageStore.size > 5000) {
+                    const firstKey = session.messageStore.keys().next().value;
+                    session.messageStore.delete(firstKey);
+                }
             }
 
             // 8. Record Safety Stats
